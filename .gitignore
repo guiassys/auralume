@@ -10,6 +10,7 @@ __pycache__/
 venv/
 env/
 ENV/
+musicgen310/
 
 # Distribution / packaging
 build/
@@ -52,23 +53,18 @@ Thumbs.db
 # Assets (IMPORTANT)
 # =========================
 
-# Generated audio (heavy files)
+# Generated audio (project-specific)
 assets/audio/generated/
+outputs/
+generated/
 
-# Raw audio exports
-*.wav
-*.mp3
-*.flac
-
-# Video renders (very heavy)
+# Video renders
 assets/video/renders/
-
-# Temporary video files
 *.mp4
 *.mov
 *.avi
 
-# High-resolution images (optional, adjust if needed)
+# Images renders
 assets/images/renders/
 
 # =========================
@@ -77,6 +73,11 @@ assets/images/renders/
 .cache/
 tmp/
 temp/
+
+# HuggingFace / ML caches
+.huggingface/
+huggingface/
+transformers/
 
 # =========================
 # Machine Learning / Models
