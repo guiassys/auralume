@@ -71,3 +71,5 @@ Auralith é projetado como um sistema escalável capaz de gerar múltiplos unive
 
 Este projeto é proprietário e confidencial.  
 Todos os direitos reservados.
+
+
