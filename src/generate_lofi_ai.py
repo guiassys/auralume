@@ -6,7 +6,13 @@ def main():
 
     print("[START] Gerando música Lo-fi com IA...\n")
 
-    path = gen.generate(duration=180)
+    try:
+        duration = int(input("Informe a duração da musica. Ex (30 ou 180): "))
+    except ValueError:
+        duration = 180
+        print("Valor inválido, usando 180 segundos.")
+
+    path = gen.generate(duration=duration)
 
     print(f"\n[FINAL] Arquivo gerado: {path}")
 
