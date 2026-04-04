@@ -57,42 +57,14 @@ Prompt → MusicGenEngine → Processamento Tensor → Pós-processamento → Ar
 ---
 
 # ⚙️ Como executar o projeto
-
-## 1. Criar ambiente virtual
-
 ```bash
 python -m venv musicgen310
 musicgen310\Scripts\activate
-```
-
----
-
-## 2. Instalar dependências
-
-```bash
-pip install torch torchvision torchaudio
-pip install transformers soundfile numpy
-```
-
----
-
-## 3. Rodar o gerador de música
-
-```bash
 python -m src.scripts.generate_lofi_ai
 ```
-
----
-
-## 4. Resultado
-
+## Resultado
 O áudio será gerado automaticamente na raiz do projeto:
 
-```
-output_lofi_XXXX.wav
-```
-
----
 
 # 📁 Estrutura do Projeto
 

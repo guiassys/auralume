@@ -1,5 +1,5 @@
-from src.ai_music.musicgen_engine import MusicGenEngine
-from src.ai_music.prompts import LOFI_PROMPTS
+from src.musicgen_engine import MusicGenEngine
+from src.prompts import LOFI_PROMPTS
 import random
 import soundfile as sf
 import numpy as np

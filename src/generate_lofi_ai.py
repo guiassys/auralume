@@ -1,4 +1,4 @@
-from src.ai_music.generator import LofiGenerator
+from src.generator import LofiGenerator
 
 
 def main():
