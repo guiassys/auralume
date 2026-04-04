@@ -6,7 +6,7 @@ def main():
 
     print("[START] Gerando música Lo-fi com IA...\n")
 
-    path = gen.generate(duration=30)
+    path = gen.generate(duration=180)
 
     print(f"\n[FINAL] Arquivo gerado: {path}")
 

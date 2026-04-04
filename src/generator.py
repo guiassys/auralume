@@ -9,7 +9,7 @@ class LofiGenerator:
     def __init__(self):
         self.engine = MusicGenEngine(model_size="medium")
 
-    def generate(self, prompt=None, duration=30):
+    def generate(self, prompt=None, duration=180):
         if prompt is None:
             prompt = random.choice(LOFI_PROMPTS)
 
