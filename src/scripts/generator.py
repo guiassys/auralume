@@ -1,4 +1,5 @@
 import logging
+import os
 import random
 import re
 import soundfile as sf
@@ -17,10 +18,11 @@ def sanitize_filename(name: str) -> str:
 
 
 class LofiGenerator:
-    def __init__(self):
+    def __init__(self, output_dir: str = "."):
         self.engine = MusicGenEngine(model_size="medium")
         self.pipeline = MusicPipeline()
         self.logger = logging.getLogger(__name__)
+        self.output_dir = output_dir
 
     def generate(self, prompt=None, duration=None, name=None):
         if duration is None:
@@ -42,9 +44,9 @@ class LofiGenerator:
 
         print(f"\n[LOFI GEN] Tempo total de geração: {end_time - start_time:.2f} segundos")
 
-        return self.save_audio(wav, sr, final_prompt, name)
+        return self.save_audio(wav, sr, final_prompt, name, self.output_dir)
 
-    def save_audio(self, wav, sample_rate, prompt, name=None):
+    def save_audio(self, wav, sample_rate, prompt, name=None, output_dir: str = "."):
         print("\n[LOFI GEN] Salvando áudio...")
 
         # corrige formato do tensor
@@ -64,10 +66,14 @@ class LofiGenerator:
         else:
             file_base = f"lofi_{abs(hash(prompt)) % 10000}_{timestamp}"
 
-        path = f"{file_base}.wav"
+        # Garante que o diretório de saída existe
+        os.makedirs(output_dir, exist_ok=True)
 
-        sf.write(path, wav, sample_rate)
+        # Cria o caminho completo do arquivo
+        file_path = os.path.join(output_dir, f"{file_base}.wav")
 
-        print(f"[FINAL] Arquivo gerado: {path}")
+        sf.write(file_path, wav, sample_rate)
 
-        return path
+        print(f"[FINAL] Arquivo gerado: {file_path}")
+
+        return file_path

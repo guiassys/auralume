@@ -56,6 +56,12 @@ A geração musical usa um pipeline modular para transformar o prompt inicial em
 4. `MusicPipeline._instrument_stage`: define instrumentos e timbres.
 5. `MusicPipeline._mix_stage`: produz o prompt final que é enviado ao `MusicGenEngine`.
 
+## Diretórios de saída
+
+- **CLI**: Arquivos salvos no diretório atual (raiz do projeto)
+- **Web**: Arquivos salvos em `outputs/` (relativo à raiz do projeto)
+- **Programático**: Depende do parâmetro `output_dir` passado para `MusicGenerationService`
+
 ## Requisitos básicos
 
 - Python 3.10+

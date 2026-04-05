@@ -16,7 +16,7 @@ class MusicGenerationService:
     def __init__(self, output_dir: str = "outputs"):
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
-        self.generator = LofiGenerator()
+        self.generator = LofiGenerator(output_dir=self.output_dir)
         self._lock = threading.Lock()  # Para isolamento básico em múltiplos usuários
 
     def generate_music(

@@ -151,6 +151,7 @@ auralith/
 ✔ Geração de música lo-fi funcional  
 ✔ Pipeline modular com LangChain  
 ✔ Interface Web com Gradio (funcionando)  
+✔ Salvamento correto em diretórios  
 ✔ Execução via CLI e Web  
 🚧 Geração de vídeo (em desenvolvimento)  
 🚧 Integração com personagem Aelion  

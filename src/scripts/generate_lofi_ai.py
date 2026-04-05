@@ -9,7 +9,7 @@ from src.scripts.prompts import LOFI_PROMPTS
 
 
 def main():
-    gen = LofiGenerator()
+    gen = LofiGenerator(output_dir="outputs")
 
     print("[START] Gerando música Lo-fi com IA...\n")
 
