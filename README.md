@@ -52,22 +52,27 @@ O Auralith foi projetado como um pipeline modular de geração de conteúdo mult
 
 ## 🔄 Fluxo do sistema
 
-Prompt → MusicGenEngine → Processamento Tensor → Pós-processamento → Arquivo WAV
+Prompt → Pipeline de prompt → MusicGenEngine → Processamento Tensor → Pós-processamento → Arquivo WAV
 
 ---
 
 # ⚙️ Como executar o projeto
 ```bash
 python -m venv musicgen310
-musicgen310\activate
+musicgen310\Scripts\Activate.ps1
 pip install torch
 pip install numpy transformers
 pip install soundfile
+pip install langchain
 python -m src.scripts.generate_lofi_ai
 ```
 ## Resultado
-O áudio será gerado automaticamente na raiz do projeto:
+O áudio será gerado automaticamente no diretório onde o comando for executado.
 
+## Observações
+- O pipeline de geração agora está implementado em `src/scripts/music_pipeline.py`.
+- A classe `LofiGenerator` em `src/scripts/generator.py` usa o pipeline para criar um prompt final antes de acionar o modelo.
+- Um README adicional com detalhes do pipeline está disponível em `src/README.md`.
 
 # 📁 Estrutura do Projeto
 

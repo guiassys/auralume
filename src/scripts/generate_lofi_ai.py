@@ -1,3 +1,9 @@
+"""Entrypoint para gerar música com o pipeline modular.
+
+Execução:
+    python -m src.scripts.generate_lofi_ai
+"""
+
 from src.scripts.generator import LofiGenerator
 from src.scripts.prompts import LOFI_PROMPTS
 
