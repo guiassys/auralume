@@ -21,7 +21,7 @@ def main():
 
     try:
         from src.web.app import interface
-        print("🚀 Iniciando Auralith Web...")
+        print("🚀 Iniciando Auralith Studio...")
         print("📱 Acesse: http://localhost:7860")
         print("❌ Pressione Ctrl+C para parar")
 

@@ -24,7 +24,7 @@ class LofiGenerator:
         self.logger = logging.getLogger(__name__)
         self.output_dir = output_dir
 
-    def generate(self, prompt=None, duration=None, name=None):
+    def generate(self, prompt=None, duration=None, name=None, style=None):
         if duration is None:
             try:
                 duration = int(input("Digite a duração da música em segundos (padrão 180): ") or 180)
@@ -35,7 +35,8 @@ class LofiGenerator:
         if prompt is None:
             prompt = random.choice(LOFI_PROMPTS)
 
-        final_prompt = self.pipeline.build(prompt=prompt, duration=duration, style=prompt)
+        style = style or self._infer_style_from_prompt(prompt)
+        final_prompt = self.pipeline.build(prompt=prompt, duration=duration, style=style)
         self.logger.info("[LOFI GEN] Prompt de geração final: %s", final_prompt)
 
         start_time = time.time()
@@ -45,6 +46,20 @@ class LofiGenerator:
         print(f"\n[LOFI GEN] Tempo total de geração: {end_time - start_time:.2f} segundos")
 
         return self.save_audio(wav, sr, final_prompt, name, self.output_dir)
+
+    def _infer_style_from_prompt(self, prompt: str) -> str:
+        normalized = prompt.lower()
+        if "lofi" in normalized or "lo-fi" in normalized:
+            return "lo-fi"
+        if "hip hop" in normalized or "hip-hop" in normalized:
+            return "hip hop"
+        if "jazz" in normalized:
+            return "jazz"
+        if "study" in normalized or "study music" in normalized or "relax" in normalized:
+            return "relaxed"
+        if "rock" in normalized:
+            return "rock"
+        return "lo-fi"
 
     def save_audio(self, wav, sample_rate, prompt, name=None, output_dir: str = "."):
         print("\n[LOFI GEN] Salvando áudio...")

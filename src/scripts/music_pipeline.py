@@ -28,6 +28,7 @@ class MusicPipeline:
             {
                 "melody": RunnableLambda(self._melody_stage),
                 "rhythm": RunnableLambda(self._rhythm_stage),
+                "harmony": RunnableLambda(self._harmony_stage),
             }
             | RunnableLambda(self._combine_stage)
             | RunnableLambda(self._instrument_stage)
@@ -90,6 +91,7 @@ class MusicPipeline:
     def _combine_stage(self, inputs: dict[str, Any]) -> dict[str, Any]:
         melody_outputs = inputs["melody"]
         rhythm_outputs = inputs["rhythm"]
+        harmony_outputs = inputs["harmony"]
 
         return {
             "prompt": melody_outputs["prompt"],
@@ -97,12 +99,30 @@ class MusicPipeline:
             "style": melody_outputs["style"],
             "melody": melody_outputs["melody"],
             "rhythm": rhythm_outputs["rhythm"],
+            "harmony": harmony_outputs["harmony"],
+        }
+
+    def _harmony_stage(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        style = inputs["style"]
+        chord_progression = self._choose_chord_progression(style)
+
+        harmony = (
+            f"Harmonia suave baseada na progressão de acordes {chord_progression}, com centro tonal claro e voicings ricos. "
+            f"Use acordes com sétima e nona, mantendo a progressão coesa e emocional durante toda a faixa."
+        )
+
+        return {
+            "prompt": inputs["prompt"],
+            "duration": inputs["duration"],
+            "style": style,
+            "harmony": harmony,
         }
 
     def _instrument_stage(self, inputs: dict[str, Any]) -> dict[str, Any]:
         style = inputs["style"]
         melody = inputs["melody"]
         rhythm = inputs["rhythm"]
+        harmony = inputs["harmony"]
 
         instrumentation = self._describe_instruments(style, melody, rhythm)
 
@@ -112,6 +132,7 @@ class MusicPipeline:
             "style": style,
             "melody": melody,
             "rhythm": rhythm,
+            "harmony": harmony,
             "instrumentation": instrumentation,
         }
 
@@ -121,12 +142,14 @@ class MusicPipeline:
         duration = inputs["duration"]
         melody = inputs["melody"]
         rhythm = inputs["rhythm"]
+        harmony = inputs["harmony"]
         instrumentation = inputs["instrumentation"]
 
         final_prompt = (
             f"{prompt}. {style}. "
-            f"Elementos principais: {melody} {rhythm} {instrumentation} "
-            f"Finalize com uma mixagem limpa, ambiência suave e característica analógica. "
+            f"Elementos principais: {melody} {rhythm} {harmony} {instrumentation} "
+            f"Mantenha um centro tonal consistente, uma progressão harmônica clara e uma melodia que respeite a tonalidade. "
+            f"Finalize com uma mixagem limpa, ambiência suave e textura de fita vintage. "
             f"Duração aproximada: {int(duration)} segundos."
         )
 
@@ -136,9 +159,20 @@ class MusicPipeline:
             "style": style,
             "melody": melody,
             "rhythm": rhythm,
+            "harmony": harmony,
             "instrumentation": instrumentation,
             "final_prompt": final_prompt,
         }
+
+    def _choose_chord_progression(self, style: str) -> str:
+        style = style.lower()
+        if "hip hop" in style:
+            return "Cmaj7 - Am7 - Dm7 - G7"
+        if "jazz" in style:
+            return "Dm7 - G7 - Cmaj7 - Fmaj7"
+        if "study" in style or "relax" in style:
+            return "Am7 - Dm7 - G7 - Cmaj7"
+        return "Cmaj7 - Am7 - Dm7 - G7"
 
     def _choose_bpm(self, style: str) -> int:
         style = style.lower()

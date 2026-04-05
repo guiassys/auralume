@@ -59,9 +59,9 @@ def generate_music_interface(
 
 
 # Interface Gradio
-with gr.Blocks(title="Auralith Web", theme=gr.themes.Soft()) as interface:
-    gr.Markdown("# 🎧 Auralith Web")
-    gr.Markdown("Gere músicas Lo-fi personalizadas usando IA.")
+with gr.Blocks(title="Auralith Studio", theme=gr.themes.Soft()) as interface:
+    gr.Markdown("# 🎧 Auralith Studio")
+    gr.Markdown("Crie trilhas sonoras Lo-fi personalizadas com IA")
 
     with gr.Row():
         with gr.Column():
@@ -79,9 +79,9 @@ with gr.Blocks(title="Auralith Web", theme=gr.themes.Soft()) as interface:
 
             prompt_input = gr.Textbox(
                 label="Estilo Musical",
-                placeholder="Ex: lo-fi hip hop, chill beats, jazzy piano...",
+                placeholder="Ex: lo-fi hip hop suave, piano Rhodes, progressão Cmaj7-Am7-Dm7-G7, chuva leve...",
                 lines=3,
-                value="lofi hip hop chill beat, vinyl crackle, soft piano"
+                value="lofi hip hop suave com piano Rhodes, baixo elétrico melódico, progressão Cmaj7-Am7-Dm7-G7, pad analógico e chuva leve"
             )
 
             generate_btn = gr.Button("🎵 Gerar Música", variant="primary")
