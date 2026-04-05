@@ -57,21 +57,45 @@ Prompt → Pipeline de prompt → MusicGenEngine → Processamento Tensor → P�
 ---
 
 # ⚙️ Como executar o projeto
+
+## Instalação rápida
 ```bash
 python -m venv musicgen310
 musicgen310\Scripts\Activate.ps1
-pip install torch
-pip install numpy transformers
-pip install soundfile
-pip install langchain
+pip install -r requirements.txt
+```
+
+## Via Terminal (CLI)
+```bash
 python -m src.scripts.generate_lofi_ai
 ```
+
+## Via Interface Web (Gradio)
+```bash
+python run_web.py
+```
+Acesse: http://localhost:7860
+
+**Interface Web:**
+- Preencha o nome da música (opcional)
+- Selecione a duração (30, 60, 90 ou 180 segundos)
+- Digite o estilo musical desejado
+- Clique em "Gerar Música"
+- Acompanhe o progresso pelas notificações
+- Baixe o arquivo gerado quando concluído
+
+**Nota:** Este script pode ser executado de qualquer diretório e detecta automaticamente a localização do projeto.
+
 ## Resultado
-O áudio será gerado automaticamente no diretório onde o comando for executado.
+O áudio será gerado automaticamente no diretório onde o comando for executado (CLI) ou em `outputs/` (Web).
+
+## Exemplo programático
+Veja `example.py` para uso programático do serviço de geração.
 
 ## Observações
 - O pipeline de geração agora está implementado em `src/scripts/music_pipeline.py`.
 - A classe `LofiGenerator` em `src/scripts/generator.py` usa o pipeline para criar um prompt final antes de acionar o modelo.
+- A interface Web reutiliza o pipeline existente sem alterações.
 - Um README adicional com detalhes do pipeline está disponível em `src/README.md`.
 
 # 📁 Estrutura do Projeto
@@ -79,6 +103,23 @@ O áudio será gerado automaticamente no diretório onde o comando for executado
 ```
 auralith/
 ├── src/
+│   ├── scripts/          # Pipeline de geração musical
+│   │   ├── generate_lofi_ai.py
+│   │   ├── generator.py
+│   │   ├── musicgen_engine.py
+│   │   ├── music_pipeline.py
+│   │   └── prompts.py
+│   ├── services/         # Camada de aplicação
+│   │   └── music_service.py
+│   ├── web/              # Interface Web
+│   │   ├── app.py
+│   │   └── run_web.py
+│   └── ai_agent/         # Prompts e documentação
+├── outputs/              # Arquivos gerados
+├── run_web.py            # Script de execução da interface Web
+├── example.py            # Exemplo programático
+├── requirements.txt      # Dependências
+├── musicgen310/          # Ambiente virtual
 └── README.md
 ```
 
@@ -91,6 +132,8 @@ auralith/
 - Transformers (Hugging Face)
 - SoundFile
 - NumPy
+- LangChain
+- Gradio (para interface Web)
 
 ---
 
@@ -106,8 +149,9 @@ auralith/
 # 🚧 Status do Projeto
 
 ✔ Geração de música lo-fi funcional  
-✔ Pipeline local executando em CPU  
-✔ Exportação de áudio WAV  
+✔ Pipeline modular com LangChain  
+✔ Interface Web com Gradio (funcionando)  
+✔ Execução via CLI e Web  
 🚧 Geração de vídeo (em desenvolvimento)  
 🚧 Integração com personagem Aelion  
 🚧 Rádio lo-fi contínua (em planejamento)  

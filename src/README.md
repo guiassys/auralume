@@ -13,26 +13,38 @@ Este README descreve o fluxo de geração de música no diretório `src` do proj
   - faixa instrumental
   - mixagem
 - `src/scripts/prompts.py` - prompts de exemplo para geração Lo-fi.
+- `src/services/music_service.py` - serviço que encapsula a lógica de geração para reutilização.
+- `src/web/app.py` - interface Web usando Gradio.
+- `src/web/run_web.py` - script para executar a interface Web.
 
 ## Como usar
 
+### Via Terminal
 1. Ative o ambiente virtual do projeto:
-
 ```powershell
 cd c:\devtools\repo\auralith
 .\musicgen310\Scripts\Activate.ps1
 ```
 
 2. Execute o gerador:
-
 ```powershell
 python -m src.scripts.generate_lofi_ai
 ```
 
-3. Siga as instruções na tela:
-- Informe a duração em segundos
-- Informe um prompt de estilo musical (por exemplo, `hip hop`, `lo-fi`, `rock`)
-- Opcionalmente, informe um nome para o arquivo
+### Via Interface Web
+1. Instale Gradio:
+```bash
+pip install gradio
+```
+
+2. Execute a interface (do diretório raiz do projeto):
+```bash
+python src/web/run_web.py
+```
+
+3. Acesse: http://localhost:7860
+
+**Importante:** Execute sempre a partir do diretório raiz do projeto (`auralith/`) para que os imports Python funcionem corretamente.
 
 ## Arquitetura do pipeline
 
@@ -52,12 +64,14 @@ A geração musical usa um pipeline modular para transformar o prompt inicial em
 - `soundfile`
 - `numpy`
 - `langchain`
+- `gradio` (para interface Web)
 
 ## Observações
 
 - O pipeline preserva a lógica existente do gerador.
 - `MusicPipeline` permite extensão futura com etapas adicionais.
 - A engine atual usa chunks de 30 segundos para gerar áudio de forma incremental.
+- A interface Web reutiliza o pipeline sem modificá-lo.
 
 ## Exemplo de uso rápido
 
