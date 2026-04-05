@@ -59,7 +59,10 @@ Prompt → MusicGenEngine → Processamento Tensor → Pós-processamento → Ar
 # ⚙️ Como executar o projeto
 ```bash
 python -m venv musicgen310
-musicgen310\Scripts\activate
+musicgen310\activate
+pip install torch
+pip install numpy transformers
+pip install soundfile
 python -m src.scripts.generate_lofi_ai
 ```
 ## Resultado
@@ -71,12 +74,6 @@ O áudio será gerado automaticamente na raiz do projeto:
 ```
 auralith/
 ├── src/
-│   ├── ai_music/
-│   └── scripts/
-├── assets/
-├── data/
-├── docs/
-├── tests/
 └── README.md
 ```
 

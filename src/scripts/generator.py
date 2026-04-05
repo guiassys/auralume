@@ -1,5 +1,5 @@
-from src.musicgen_engine import MusicGenEngine
-from src.prompts import LOFI_PROMPTS
+from src.scripts.musicgen_engine import MusicGenEngine
+from src.scripts.prompts import LOFI_PROMPTS
 import random
 import re
 import soundfile as sf

@@ -1,5 +1,5 @@
-from src.generator import LofiGenerator
-from src.prompts import LOFI_PROMPTS
+from src.scripts.generator import LofiGenerator
+from src.scripts.prompts import LOFI_PROMPTS
 
 
 def main():
