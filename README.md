@@ -79,15 +79,10 @@ Acesse: http://localhost:7860
 **Interface Web:**
 - Preencha o nome da música (opcional)
 - Selecione a duração (30, 60, 90 ou 180 segundos)
-- Digite o estilo musical desejado, incluindo informações harmônicas quando possível (ex.: progressão de acordes, tonalidade, instrumento principal)
+- Digite o estilo musical desejado
 - Clique em "Gerar Música"
 - Acompanhe o progresso pelas notificações
 - Baixe o arquivo gerado quando concluído
-
-**Exemplos de prompts recomendados:**
-- "Lo-fi hip hop suave com piano Rhodes, baixo elétrico melódico, progressão Cmaj7-Am7-Dm7-G7 e chuva leve"
-- "Lo-fi jazz em Dm com acordes com sétima e nona, pad analógico e textura de fita vintage"
-- "Lo-fi study beat com progressão ii-V-I em Cmaj7, melodias dórica suaves e ambiente relaxante"
 
 **Nota:** Este script pode ser executado de qualquer diretório e detecta automaticamente a localização do projeto.
 
@@ -99,9 +94,8 @@ Veja `example.py` para uso programático do serviço de geração.
 
 ## Observações
 - O pipeline de geração agora está implementado em `src/scripts/music_pipeline.py`.
-- A classe `LofiGenerator` em `src/scripts/generator.py` separa o prompt do estilo, permitindo inferir melhor a categoria musical.
-- O sistema agora adiciona uma etapa explícita de harmonia no prompt final, com progressão de acordes e centro tonal consistente.
-- A interface Web foi atualizada para sugerir prompts mais ricos em harmonia e arranjo ao usuário.
+- A classe `LofiGenerator` em `src/scripts/generator.py` usa o pipeline para criar um prompt final antes de acionar o modelo.
+- A interface Web reutiliza o pipeline existente sem alterações.
 - Um README adicional com detalhes do pipeline está disponível em `src/README.md`.
 
 # 📁 Estrutura do Projeto
