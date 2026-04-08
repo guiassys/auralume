@@ -8,32 +8,63 @@ from src.scripts.generator import LofiGenerator
 from src.scripts.prompts import LOFI_PROMPTS
 
 
-def main():
-    gen = LofiGenerator(output_dir="outputs")
+DEFAULT_DURATION = 180
+OUTPUT_DIR = "outputs"
 
-    print("[START] Gerando música Lo-fi com IA...\n")
 
+def get_duration() -> int:
+    """Solicita duração da música ao usuário."""
     try:
-        duration = int(input("Informe a duração da musica em segundos. Ex (30 ou 180): "))
+        return int(input("Informe a duração da musica em segundos. Ex (30 ou 180): "))
     except ValueError:
-        duration = 180
-        print("Valor inválido, usando 180 segundos.")
+        print(f"Valor inválido, usando {DEFAULT_DURATION} segundos.")
+        return DEFAULT_DURATION
 
+
+def show_prompt_examples() -> None:
+    """Exibe exemplos de prompts disponíveis."""
     print("\nExemplos de prompt:")
     for prompt_example in LOFI_PROMPTS:
         print(f" - {prompt_example}")
 
-    prompt = input("\nInforme as características/prompt da música (ou pressione Enter para usar um prompt aleatório): ").strip()
-    if not prompt:
-        prompt = None
 
-    song_name = input("Informe um nome para a música (opcional, pressione Enter para nome automático): ").strip()
-    if not song_name:
-        song_name = None
+def get_music_prompt() -> str | None:
+    """Coleta o prompt da música."""
+    prompt = input(
+        "\nInforme as características/prompt da música (ou pressione Enter para usar um prompt aleatório): "
+    ).strip()
+
+    return prompt if prompt else None
+
+
+def get_song_name() -> str | None:
+    """Coleta o nome da música."""
+    song_name = input(
+        "Informe um nome para a música (opcional, pressione Enter para nome automático): "
+    ).strip()
+
+    return song_name if song_name else None
+
+
+def generate_music():
+    """Executa o fluxo principal de geração de música."""
+    gen = LofiGenerator(output_dir=OUTPUT_DIR)
+
+    print("[START] Gerando música Lo-fi com IA...\n")
+
+    duration = get_duration()
+    show_prompt_examples()
+
+    prompt = get_music_prompt()
+    song_name = get_song_name()
 
     path = gen.generate(prompt=prompt, duration=duration, name=song_name)
 
     print(f"\n[FINAL] Arquivo gerado: {path}")
+
+
+def main():
+    generate_music()
 
 
 if __name__ == "__main__":

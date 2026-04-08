@@ -41,10 +41,16 @@ class LofiGenerator:
         start_time = time.time()
         wav, sr = self.engine.generate(final_prompt, duration)
         end_time = time.time()
-
-        print(f"\n[LOFI GEN] Tempo total de geração: {end_time - start_time:.2f} segundos")
+        self.print_time_results(start_time, end_time)
 
         return self.save_audio(wav, sr, final_prompt, name, self.output_dir)
+    
+    def print_time_results(self, start_time, end_time):
+        total_seconds = int(end_time - start_time)
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+        print(f"\n[LOFI GEN] Tempo total de geração: {hours:02d}:{minutes:02d}:{seconds:02d}")
 
     def save_audio(self, wav, sample_rate, prompt, name=None, output_dir: str = "."):
         print("\n[LOFI GEN] Salvando áudio...")

@@ -58,10 +58,21 @@ Prompt → Pipeline de prompt → MusicGenEngine → Processamento Tensor → P�
 
 # ⚙️ Como executar o projeto
 
+## Instalação desenvolvedor wsl + Ubuntu
+```bash
+cd ~/devtools/repos/auralith
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python run_web.py
+```
+
+
 ## Instalação rápida
 ```bash
-python -m venv musicgen310
-musicgen310\Scripts\Activate.ps1
+python -m venv venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
