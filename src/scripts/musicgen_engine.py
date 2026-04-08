@@ -1,3 +1,4 @@
+import logging as log
 import torch
 import math
 from transformers import MusicgenForConditionalGeneration, AutoProcessor
@@ -8,16 +9,27 @@ class MusicGenEngine:
     def __init__(self, model_size="medium"):
         self.model_name = f"facebook/musicgen-{model_size}"
 
-        print(f"[MusicGenEngine] Carregando modelo: {self.model_name}")
+        log.info(f'[MusicGenEngine] Loading model: {self.model_name}')
 
-        # Verifica disponibilidade da GPU
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # 🔍 DEBUG CUDA
+        log.info(f"torch version: {torch.__version__}")
+        log.info(f"CUDA available: {torch.cuda.is_available()}")
+        log.info(f"CUDA device count: {torch.cuda.device_count()}")
+
+        if torch.cuda.is_available():
+            self.device = torch.device('cuda')
+            log.info(f"Using GPU: {torch.cuda.get_device_name(0)}")
+        else:
+            self.device = torch.device('cpu')
+            log.error("CUDA NÃO está funcionando. Usando CPU.")
+
+        print(f"[MusicGenEngine] Carregando modelo: {self.model_name}")
 
         self.processor = AutoProcessor.from_pretrained(self.model_name)
 
         self.model = MusicgenForConditionalGeneration.from_pretrained(
             self.model_name,
-            torch_dtype=torch.float32
+            torch_dtype=torch.float16 if self.device.type == "cuda" else torch.float32
         )
 
         self.model = self.model.to(self.device)
@@ -28,7 +40,7 @@ class MusicGenEngine:
     def generate(self, prompt="lofi chill beats", duration=30):
         print(f"\n[LOFI GEN] Prompt: {prompt}")
 
-        chunk_duration = 30  # segundos por chunk para evitar limite de posição
+        chunk_duration = 30
         num_chunks = math.ceil(duration / chunk_duration)
         total_audio = []
 
@@ -41,6 +53,7 @@ class MusicGenEngine:
 
         with Progress() as progress:
             task = progress.add_task("[cyan]Gerando música...", total=num_chunks)
+
             with torch.no_grad():
                 for i in range(num_chunks):
                     current_duration = min(chunk_duration, duration - i * chunk_duration)
@@ -48,16 +61,17 @@ class MusicGenEngine:
 
                     audio_chunk = self.model.generate(
                         **inputs,
-                        max_new_tokens=max_tokens
+                        audio_prompt=total_audio[-1].unsqueeze(0) if total_audio else None,
+                        max_new_tokens=max_tokens,
+                        do_sample=True,
+                        top_k=250,
+                        top_p=0.95,
+                        temperature=1.0
                     )
 
                     total_audio.append(audio_chunk.squeeze(0))
                     progress.update(task, advance=1)
 
-        # Concatena todos os chunks de áudio
-        if len(total_audio) > 1:
-            audio = torch.cat(total_audio, dim=0)
-        else:
-            audio = total_audio[0]
+        audio = torch.cat(total_audio, dim=0) if len(total_audio) > 1 else total_audio[0]
 
         return audio, 32000
