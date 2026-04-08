@@ -1,6 +1,6 @@
 LOFI_PROMPTS = [
-    "lofi hip hop suave com piano Rhodes, baixo elétrico melódico, progressão de acordes Cmaj7 - Am7 - Dm7 - G7, pad analógico e chuva leve",
-    "lofi jazz tranquilo em Dm, acordes com sétima e nona, voicings suaves, textura de fita e ambiente aconchegante",
-    "lofi study beat com progressão ii-V-I em Cmaj7, melodia em modo dórico, piano suave e padrão rítmico moderado",
-    "lofi dreamy beat em Fmaj7, baixo melódico, pads atmosféricos, harmonia rica e nostalgia de chuva"
+    "lofi hip hop chill beat, vinyl crackle, soft piano, jazzy chords, nostalgic atmosphere",
+    "relaxed study music, warm analog sound, slow tempo, rain ambience",
+    "dreamy lo-fi beat, soft pads, tape hiss, calm night vibe",
+    "jazzy lo-fi hip hop, upright bass, piano chords, relaxed groove"
 ]

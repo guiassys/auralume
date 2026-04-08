@@ -1,4 +1,4 @@
-# Correções - Auralith Studio Interface
+# Correções - Auralith Web Interface
 
 ## v1.1.0 - Correção de Bug Crítico
 

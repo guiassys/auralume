@@ -24,7 +24,7 @@ class LofiGenerator:
         self.logger = logging.getLogger(__name__)
         self.output_dir = output_dir
 
-    def generate(self, prompt=None, duration=None, name=None, style=None):
+    def generate(self, prompt=None, duration=None, name=None):
         if duration is None:
             try:
                 duration = int(input("Digite a duração da música em segundos (padrão 180): ") or 180)
@@ -35,8 +35,7 @@ class LofiGenerator:
         if prompt is None:
             prompt = random.choice(LOFI_PROMPTS)
 
-        style = style or self._infer_style_from_prompt(prompt)
-        final_prompt = self.pipeline.build(prompt=prompt, duration=duration, style=style)
+        final_prompt = self.pipeline.build(prompt=prompt, duration=duration, style=prompt)
         self.logger.info("[LOFI GEN] Prompt de geração final: %s", final_prompt)
 
         start_time = time.time()
@@ -47,33 +46,26 @@ class LofiGenerator:
 
         return self.save_audio(wav, sr, final_prompt, name, self.output_dir)
 
-    def _infer_style_from_prompt(self, prompt: str) -> str:
-        normalized = prompt.lower()
-        if "lofi" in normalized or "lo-fi" in normalized:
-            return "lo-fi"
-        if "hip hop" in normalized or "hip-hop" in normalized:
-            return "hip hop"
-        if "jazz" in normalized:
-            return "jazz"
-        if "study" in normalized or "study music" in normalized or "relax" in normalized:
-            return "relaxed"
-        if "rock" in normalized:
-            return "rock"
-        return "lo-fi"
-
     def save_audio(self, wav, sample_rate, prompt, name=None, output_dir: str = "."):
         print("\n[LOFI GEN] Salvando áudio...")
 
-        # corrige formato do tensor
+        # 🔹 Caso venha como lista
         if isinstance(wav, list):
             wav = wav[0]
 
-        wav = np.array(wav).squeeze()
+        # 🔥 CORREÇÃO PRINCIPAL (CUDA → CPU → NumPy)
+        if hasattr(wav, "detach"):
+            wav = wav.detach().cpu().numpy()
+
+        # Garante formato correto
+        if wav.dtype == np.float16:
+            wav = wav.astype(np.float32)
 
         if wav.ndim > 1:
             wav = wav.reshape(-1)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
         if name:
             file_base = sanitize_filename(name)
             if not file_base:
@@ -81,12 +73,13 @@ class LofiGenerator:
         else:
             file_base = f"lofi_{abs(hash(prompt)) % 10000}_{timestamp}"
 
-        # Garante que o diretório de saída existe
+        # Garante que o diretório existe
         os.makedirs(output_dir, exist_ok=True)
 
-        # Cria o caminho completo do arquivo
+        # Caminho final
         file_path = os.path.join(output_dir, f"{file_base}.wav")
 
+        # Salva o áudio
         sf.write(file_path, wav, sample_rate)
 
         print(f"[FINAL] Arquivo gerado: {file_path}")
