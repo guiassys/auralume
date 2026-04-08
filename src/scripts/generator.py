@@ -49,16 +49,23 @@ class LofiGenerator:
     def save_audio(self, wav, sample_rate, prompt, name=None, output_dir: str = "."):
         print("\n[LOFI GEN] Salvando áudio...")
 
-        # corrige formato do tensor
+        # 🔹 Caso venha como lista
         if isinstance(wav, list):
             wav = wav[0]
 
-        wav = np.array(wav).squeeze()
+        # 🔥 CORREÇÃO PRINCIPAL (CUDA → CPU → NumPy)
+        if hasattr(wav, "detach"):
+            wav = wav.detach().cpu().numpy()
+
+        # Garante formato correto
+        if wav.dtype == np.float16:
+            wav = wav.astype(np.float32)
 
         if wav.ndim > 1:
             wav = wav.reshape(-1)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
         if name:
             file_base = sanitize_filename(name)
             if not file_base:
@@ -66,12 +73,13 @@ class LofiGenerator:
         else:
             file_base = f"lofi_{abs(hash(prompt)) % 10000}_{timestamp}"
 
-        # Garante que o diretório de saída existe
+        # Garante que o diretório existe
         os.makedirs(output_dir, exist_ok=True)
 
-        # Cria o caminho completo do arquivo
+        # Caminho final
         file_path = os.path.join(output_dir, f"{file_base}.wav")
 
+        # Salva o áudio
         sf.write(file_path, wav, sample_rate)
 
         print(f"[FINAL] Arquivo gerado: {file_path}")

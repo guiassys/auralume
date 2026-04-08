@@ -1,8 +1,8 @@
 import logging as log
 import torch
 import math
+import numpy as np
 from transformers import MusicgenForConditionalGeneration, AutoProcessor
-from rich.progress import Progress
 
 
 class MusicGenEngine:
@@ -11,7 +11,6 @@ class MusicGenEngine:
 
         log.info(f'[MusicGenEngine] Loading model: {self.model_name}')
 
-        # 🔍 DEBUG CUDA
         log.info(f"torch version: {torch.__version__}")
         log.info(f"CUDA available: {torch.cuda.is_available()}")
         log.info(f"CUDA device count: {torch.cuda.device_count()}")
@@ -22,8 +21,6 @@ class MusicGenEngine:
         else:
             self.device = torch.device('cpu')
             log.error("CUDA NÃO está funcionando. Usando CPU.")
-
-        print(f"[MusicGenEngine] Carregando modelo: {self.model_name}")
 
         self.processor = AutoProcessor.from_pretrained(self.model_name)
 
@@ -37,10 +34,23 @@ class MusicGenEngine:
 
         print(f"[MusicGenEngine] Device: {self.device}")
 
-    def generate(self, prompt="lofi chill beats", duration=30):
+    def _crossfade(self, a, b, overlap):
+        """Faz transição suave entre dois áudios"""
+        fade_out = torch.linspace(1, 0, overlap)
+        fade_in = torch.linspace(0, 1, overlap)
+
+        return (a[-overlap:] * fade_out + b[:overlap] * fade_in)
+
+    def generate(self, prompt="lofi chill beats", duration=60):
         print(f"\n[LOFI GEN] Prompt: {prompt}")
 
-        chunk_duration = 30
+        # 🔧 CONFIGURAÇÃO
+        sample_rate = 32000
+        chunk_duration = 15  # 15s por bloco
+        overlap_sec = 2      # 2s de transição suave
+
+        overlap = int(sample_rate * overlap_sec)
+
         num_chunks = math.ceil(duration / chunk_duration)
         total_audio = []
 
@@ -51,27 +61,49 @@ class MusicGenEngine:
         )
         inputs = {k: v.to(self.device) for k, v in inputs.items()}
 
-        with Progress() as progress:
-            task = progress.add_task("[cyan]Gerando música...", total=num_chunks)
+        with torch.no_grad():
+            for i in range(num_chunks):
 
-            with torch.no_grad():
-                for i in range(num_chunks):
-                    current_duration = min(chunk_duration, duration - i * chunk_duration)
-                    max_tokens = int(current_duration * 50)
+                print(f"[LOFI GEN] Chunk {i+1}/{num_chunks}")
 
-                    audio_chunk = self.model.generate(
-                        **inputs,
-                        audio_prompt=total_audio[-1].unsqueeze(0) if total_audio else None,
-                        max_new_tokens=max_tokens,
-                        do_sample=True,
-                        top_k=250,
-                        top_p=0.95,
-                        temperature=1.0
-                    )
+                current_duration = min(chunk_duration, duration - i * chunk_duration)
 
-                    total_audio.append(audio_chunk.squeeze(0))
-                    progress.update(task, advance=1)
+                # 🔥 limite de segurança GPU
+                max_tokens = min(int(current_duration * 50), 1200)
 
-        audio = torch.cat(total_audio, dim=0) if len(total_audio) > 1 else total_audio[0]
+                chunk = self.model.generate(
+                    **inputs,
+                    max_new_tokens=max_tokens,
+                    do_sample=True,
+                    top_k=250,
+                    top_p=0.95,
+                    temperature=1.0
+                )
 
-        return audio, 32000
+                chunk = chunk.squeeze(0).detach().cpu()
+
+                # 🔗 PRIMEIRO CHUNK
+                if i == 0:
+                    total_audio.append(chunk)
+                else:
+                    prev = total_audio[-1]
+
+                    # garante tamanho suficiente
+                    if len(prev) > overlap and len(chunk) > overlap:
+
+                        mixed = self._crossfade(prev, chunk, overlap)
+
+                        merged = torch.cat([
+                            prev[:-overlap],
+                            mixed,
+                            chunk[overlap:]
+                        ])
+
+                        total_audio[-1] = merged
+                    else:
+                        total_audio.append(chunk)
+
+        # 🔥 junta tudo
+        audio = torch.cat(total_audio, dim=0)
+
+        return audio, sample_rate
