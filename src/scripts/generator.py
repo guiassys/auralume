@@ -7,86 +7,131 @@ import numpy as np
 import time
 from datetime import datetime
 
-from src.scripts.music_pipeline import MusicPipeline
+from scripts.musicgen_pipeline import MusicPipeline
 from src.scripts.musicgen_engine import MusicGenEngine
-from src.scripts.prompts import LOFI_PROMPTS
 
 
 def sanitize_filename(name: str) -> str:
-    name = re.sub(r"[^\w\- ]+", "", name)
+    name = re.sub(r"[^\w\- ]+", "", name or "")
     return name.strip().replace(" ", "_")
 
 
 class LofiGenerator:
+
     def __init__(self, output_dir: str = "."):
         self.engine = MusicGenEngine(model_size="medium")
         self.pipeline = MusicPipeline()
         self.logger = logging.getLogger(__name__)
         self.output_dir = output_dir
 
-    def generate(self, prompt=None, duration=None, name=None):
-        if duration is None:
-            try:
-                duration = int(input("Digite a duração da música em segundos (padrão 180): ") or 180)
-            except ValueError:
-                duration = 180
-                print("Valor inválido, usando 180 segundos.")
+    # -----------------------------
+    # MAIN GENERATION (SINGLE PASS)
+    # -----------------------------
+    def generate(self, config: dict):
+        prompt = config.get("prompt", "lofi music")
+        duration = int(config.get("duration", 180))
+        name = config.get("name")
+        bpm_min = config.get("bpm_min", 60)
+        bpm_max = config.get("bpm_max", 80)
+        vibe = config.get("vibe", "calm")
+        instruments = config.get("instruments", [])
+        constraints = config.get("constraints", [])
 
-        if prompt is None:
-            prompt = random.choice(LOFI_PROMPTS)
+        # 🎯 SINGLE COHERENT PROMPT
+        final_prompt = self.pipeline.build(
+            prompt=prompt,
+            duration=duration,
+            style=self._build_style(
+                bpm_min,
+                bpm_max,
+                vibe,
+                instruments,
+                constraints
+            )
+        )
 
-        final_prompt = self.pipeline.build(prompt=prompt, duration=duration, style=prompt)
-        self.logger.info("[LOFI GEN] Prompt de geração final: %s", final_prompt)
+        self.logger.info("[LOFI GEN] Generating full track (single pass)")
 
         start_time = time.time()
+
+        # 🔥 ONLY ONE GENERATION (CRITICAL FIX)
         wav, sr = self.engine.generate(final_prompt, duration)
+
+        wav = self._to_numpy(wav)
+        wav = self._to_mono_safe(wav)
+        wav = self._normalize(wav)
+
         end_time = time.time()
-        self.print_time_results(start_time, end_time)
+        self._print_time_results(start_time, end_time)
 
-        return self.save_audio(wav, sr, final_prompt, name, self.output_dir)
-    
-    def print_time_results(self, start_time, end_time):
-        total_seconds = int(end_time - start_time)
-        hours = total_seconds // 3600
-        minutes = (total_seconds % 3600) // 60
-        seconds = total_seconds % 60
-        print(f"\n[LOFI GEN] Tempo total de geração: {hours:02d}:{minutes:02d}:{seconds:02d}")
+        return self.save_audio(wav, sr, prompt, name)
 
-    def save_audio(self, wav, sample_rate, prompt, name=None, output_dir: str = "."):
-        print("\n[LOFI GEN] Salvando áudio...")
+    # -----------------------------
+    # STYLE BUILDER
+    # -----------------------------
+    def _build_style(self, bpm_min, bpm_max, vibe, instruments, constraints):
 
-        # 🔹 Caso venha como lista
-        if isinstance(wav, list):
-            wav = wav[0]
+        instruments_text = ", ".join(instruments) if instruments else "lo-fi instrumentation"
+        constraints_text = ". ".join(constraints) if constraints else "smooth transitions, stable groove"
 
-        # 🔥 CORREÇÃO PRINCIPAL (CUDA → CPU → NumPy)
+        return (
+            f"{bpm_min}-{bpm_max} BPM,"
+            f"{vibe}, "
+            f"{instruments_text},"
+            f"{constraints_text},"
+        )
+
+    # -----------------------------
+    # UTILITIES
+    # -----------------------------
+    def _to_numpy(self, wav):
         if hasattr(wav, "detach"):
             wav = wav.detach().cpu().numpy()
 
-        # Garante formato correto
-        if wav.dtype == np.float16:
-            wav = wav.astype(np.float32)
+        if isinstance(wav, list):
+            wav = wav[0]
 
-        if wav.ndim > 1:
-            wav = wav.reshape(-1)
+        return np.array(wav)
+
+    def _to_mono_safe(self, x):
+        x = np.array(x)
+
+        if x.ndim == 2:
+            x = x.mean(axis=1) if x.shape[0] > x.shape[1] else x.mean(axis=0)
+
+        return x
+
+    def _normalize(self, wav):
+        wav = np.nan_to_num(wav)
+        peak = np.max(np.abs(wav))
+        if peak > 0:
+            wav = wav / peak
+        return wav.astype(np.float32)
+
+    def _print_time_results(self, start, end):
+        total = int(end - start)
+        print(f"\n[LOFI GEN] Tempo total: {total//3600:02d}:{(total%3600)//60:02d}:{total%60:02d}")
+
+    # -----------------------------
+    # SAVE
+    # -----------------------------
+    def save_audio(self, wav, sample_rate, prompt, name=None):
+
+        print("\n[LOFI GEN] Salvando áudio...")
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        if name:
-            file_base = sanitize_filename(name)
-            if not file_base:
-                file_base = f"lofi_{timestamp}"
-        else:
-            file_base = f"lofi_{abs(hash(prompt)) % 10000}_{timestamp}"
+        file_base = (
+            sanitize_filename(name)
+            if name
+            else f"lofi_{abs(hash(prompt)) % 10000}_{timestamp}"
+        )
 
-        # Garante que o diretório existe
-        os.makedirs(output_dir, exist_ok=True)
+        os.makedirs(self.output_dir, exist_ok=True)
 
-        # Caminho final
-        file_path = os.path.join(output_dir, f"{file_base}.wav")
+        file_path = os.path.join(self.output_dir, f"{file_base}.wav")
 
-        # Salva o áudio
-        sf.write(file_path, wav, sample_rate)
+        sf.write(file_path, wav, sample_rate, subtype="PCM_16")
 
         print(f"[FINAL] Arquivo gerado: {file_path}")
 

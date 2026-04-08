@@ -41,13 +41,13 @@ class MusicGenEngine:
 
         return (a[-overlap:] * fade_out + b[:overlap] * fade_in)
 
-    def generate(self, prompt="lofi chill beats", duration=60):
+    def generate(self, prompt, duration):
         print(f"\n[LOFI GEN] Prompt: {prompt}")
 
         # 🔧 CONFIGURAÇÃO
         sample_rate = 32000
-        chunk_duration = 15  # 15s por bloco
-        overlap_sec = 2      # 2s de transição suave
+        chunk_duration = 60
+        overlap_sec = 5
 
         overlap = int(sample_rate * overlap_sec)
 
@@ -68,8 +68,7 @@ class MusicGenEngine:
 
                 current_duration = min(chunk_duration, duration - i * chunk_duration)
 
-                # 🔥 limite de segurança GPU
-                max_tokens = min(int(current_duration * 50), 1200)
+                max_tokens = int(current_duration * 50)
 
                 chunk = self.model.generate(
                     **inputs,
