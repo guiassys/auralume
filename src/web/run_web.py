@@ -10,7 +10,7 @@ sys.path.insert(0, project_root)
 from src.web.app import interface
 
 if __name__ == "__main__":
-    print("🚀 Iniciando Auralith Studio...")
+    print("🚀 Iniciando Auralith Web...")
     print("📱 Acesse: http://localhost:7860")
     print("❌ Pressione Ctrl+C para parar")
 

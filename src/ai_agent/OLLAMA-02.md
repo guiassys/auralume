@@ -48,7 +48,7 @@ O pipeline deve continuar aceitando exatamente:
 ## REQUISITOS FUNCIONAIS
 
 ### Layout
-- Header com título: **Auralith Studio**
+- Header com título: **Auralith Web**
 
 ### Formulário
 - Campo: Nome da música (texto)
