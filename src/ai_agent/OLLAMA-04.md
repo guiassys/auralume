@@ -14,6 +14,9 @@ Implementar um **Hierarchical Music Pipeline** usando LangChain (LCEL) para orga
 - **Estrutura de Música Real:** Divisão em seções com intensidades diferentes.
 - **Coerência Temática:** O refrão e os versos devem compartilhar o mesmo DNA sonoro.
 - **Código Limpo:** Separação clara entre a lógica de "O que compor" (Pipeline) e "Como renderizar" (Engine).
+- **Alterações minimas:** Evite alterar o que já está funcional.
+- **Idioma:** Comentários e mensagens de sistema devem ser no idioma Inglês.
+- **Regra:** Não remova logs de sistema de forma indevida. É importante que o desenvolvedor possa acompanhar os logs para acompanhar o status do processamento.
 
 ---
 
