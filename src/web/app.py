@@ -1,19 +1,57 @@
-"""Interface Web profissional para o Auralith usando Gradio (Com trava de botão)."""
+"""Professional Web Interface for Auralith using Gradio (With button locking)."""
 
 import gradio as gr
 import logging
 import os
+import json
 from datetime import datetime
 from src.services.music_service import MusicGenerationService
 
-# Configuração de Logs
+# Logging Configuration
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Inicialização do Serviço
+# --- CONFIGURATION LOADING (Root-level discovery) ---
+def load_app_settings():
+    """
+    Locates the config.json file in the project root by navigating 
+    two levels up from this script's directory (src/web/ -> root).
+    """
+    # Get the directory of app.py (src/web/)
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    # Navigate up to the project root (auralith/)
+    project_root = os.path.abspath(os.path.join(base_path, "..", ".."))
+    config_path = os.path.join(project_root, "config.json")
+    
+    # Default fallbacks in case the file is missing or corrupted
+    default_data = {
+        "instruments": ["piano", "jazz piano", "vinyl noise", "soft drums", "electric bass", "pads", "synth"],
+        "default_instruments": ["piano", "soft drums"]
+    }
+    
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                logger.info(f"Successfully loaded settings from root: {config_path}")
+                return {
+                    "instruments": list(data.get("instruments", default_data["instruments"])),
+                    "default_instruments": list(data.get("default_instruments", default_data["default_instruments"]))
+                }
+        except Exception as e:
+            logger.error(f"Error reading config.json at root: {e}")
+    else:
+        logger.warning(f"Config file not found at root: {config_path}. Using internal defaults.")
+    
+    return default_data
+
+# Load settings once at startup
+SETTINGS = load_app_settings()
+
+# Service Initialization
 service = MusicGenerationService(output_dir="outputs")
 
-# Estilização CSS
+# Custom CSS Styling
 custom_css = """
 .terminal-box textarea { 
     background-color: #0b0f14 !important; 
@@ -36,7 +74,7 @@ def create_ui():
         gr.Markdown("# 🎧 Auralith AI Music Generator", elem_classes=["main-header"])
         
         with gr.Row():
-            # --- PAINEL DE CONTROLE (ESQUERDA) ---
+            # --- CONTROL PANEL (LEFT) ---
             with gr.Column(scale=2):
                 with gr.Group():
                     gr.Markdown("### 🎹 Track Definitions")
@@ -65,19 +103,20 @@ def create_ui():
                         bpm_min = gr.Slider(label="BPM Min", minimum=30, maximum=120, value=40, step=1)
                         bpm_max = gr.Slider(label="BPM Max", minimum=30, maximum=140, value=60, step=1)
                     
+                    # Parameters loaded from the centralized config.json
                     instruments_input = gr.CheckboxGroup(
                         label="Instruments",
-                        choices=["piano", "jazz piano", "vinyl noise", "soft drums", "electric bass", "pads", "synth"],
-                        value=["piano", "soft drums"]
+                        choices=SETTINGS["instruments"],
+                        value=SETTINGS["default_instruments"]
                     )
                     no_abrupt = gr.Checkbox(label="Avoiding abrupt changes (Smooth Transitions)", value=True)
 
                 with gr.Row():
                     clear_btn = gr.Button("🗑️ Clean")
-                    # Botão que será travado
+                    # Main button subject to the locking logic
                     generate_btn = gr.Button("🎵 GENERATE MUSIC", variant="primary", elem_classes=["generate-btn"])
 
-            # --- PAINEL DE MONITORAMENTO (DIREITA) ---
+            # --- MONITORING PANEL (RIGHT) ---
             with gr.Column(scale=3):
                 gr.Markdown("### 🖥️ Studio Console")
                 status_output = gr.Textbox(
@@ -89,13 +128,13 @@ def create_ui():
                 
                 with gr.Group():
                     gr.Markdown("### 📦 Master Output")
-                    file_output = gr.File(label="Ficheiro WAV", visible=False)
+                    file_output = gr.File(label="WAV File", visible=False)
                     audio_preview = gr.Audio(label="Preview", visible=False)
 
-        # --- LÓGICA DE EXECUÇÃO ---
+        # --- EXECUTION LOGIC ---
         def run_generation(name, duration, prompt, b_min, b_max, vibe, inst, abrupt):
             if not prompt.strip():
-                # Reativa o botão se houver erro de validação
+                # Reactivates the button if validation fails
                 yield "❌ Error: Please enter a musical theme.", gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True)
                 return
 
@@ -106,7 +145,7 @@ def create_ui():
                 log_history.append(f"[{timestamp}] {msg}")
                 return "\n".join(log_history)
 
-            # 1. TRAVA O BOTÃO: Enviamos gr.update(interactive=False) no início
+            # 1. LOCK THE BUTTON: Send interactive=False at the start
             yield update_logs("Starting Pipeline..."), gr.update(visible=False), gr.update(visible=False), gr.update(interactive=False)
             
             config = {
@@ -116,14 +155,14 @@ def create_ui():
                 "constraints": ["no abrupt changes", "smooth transitions"] if abrupt else ["smooth transitions"]
             }
 
-            # Callback para logs em tempo real
+            # Callback for real-time log updates
             def progress_hook(m):
                 log_history.append(f"[{datetime.now().strftime('%H:%M:%S')}] {m}")
 
             result = service.generate_music(config=config, progress_callback=progress_hook)
 
             if result["success"]:
-                # 2. LIBERA O BOTÃO: Enviamos gr.update(interactive=True) no final
+                # 2. RELEASE THE BUTTON: Send interactive=True upon completion
                 yield (
                     "\n".join(log_history), 
                     gr.update(value=result["file_path"], visible=True), 
@@ -132,22 +171,22 @@ def create_ui():
                 )
             else:
                 yield (
-                    update_logs(f"ERRO: {result['error']}"), 
+                    update_logs(f"ERROR: {result['error']}"), 
                     gr.update(visible=False), 
                     gr.update(visible=False),
                     gr.update(interactive=True)
                 )
 
-        # Configuração do clique com trava
+        # Button click configuration with locking
         generate_btn.click(
             fn=run_generation,
             inputs=[name_input, duration_input, prompt_input, bpm_min, bpm_max, vibe_input, instruments_input, no_abrupt],
-            # Note que adicionamos generate_btn na saída (outputs) para poder controlar sua interatividade
             outputs=[status_output, file_output, audio_preview, generate_btn]
         )
 
         def clear_form():
-            return "", 60, "", 40, 60, "calm", ["piano", "soft drums"], True, "", gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True)
+            """Resets the form to initial state using loaded config defaults."""
+            return "", 60, "", 40, 60, "calm", SETTINGS["default_instruments"], True, "", gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True)
 
         clear_btn.click(
             fn=clear_form,
@@ -159,6 +198,7 @@ def create_ui():
 interface = create_ui()
 
 if __name__ == "__main__":
+    # Launch with project specific configurations
     interface.launch(
         server_name="0.0.0.0", 
         server_port=7860, 
