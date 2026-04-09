@@ -1,4 +1,4 @@
-"""Interface Web profissional para o Auralith usando Gradio (Compatível com v5/v6)."""
+"""Interface Web profissional para o Auralith usando Gradio (Com trava de botão)."""
 
 import gradio as gr
 import logging
@@ -31,7 +31,6 @@ custom_css = """
 """
 
 def create_ui():
-    # Removido theme e css daqui para evitar o UserWarning
     with gr.Blocks(title="Auralith Studio") as demo:
         
         gr.Markdown("# 🎧 Auralith AI Music Generator", elem_classes=["main-header"])
@@ -75,6 +74,7 @@ def create_ui():
 
                 with gr.Row():
                     clear_btn = gr.Button("🗑️ Limpar")
+                    # Botão que será travado
                     generate_btn = gr.Button("🎵 GERAR MÚSICA", variant="primary", elem_classes=["generate-btn"])
 
             # --- PAINEL DE MONITORAMENTO (DIREITA) ---
@@ -87,7 +87,6 @@ def create_ui():
                     elem_classes=["terminal-box"]
                 )
                 
-                # ALTERADO: gr.Box para gr.Group (correção do erro)
                 with gr.Group():
                     gr.Markdown("### 📦 Master Output")
                     file_output = gr.File(label="Ficheiro WAV", visible=False)
@@ -96,7 +95,9 @@ def create_ui():
         # --- LÓGICA DE EXECUÇÃO ---
         def run_generation(name, duration, prompt, b_min, b_max, vibe, inst, abrupt):
             if not prompt.strip():
-                return "❌ Erro: Por favor, insira um tema musical.", None, None
+                # Reativa o botão se houver erro de validação
+                yield "❌ Erro: Por favor, insira um tema musical.", gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True)
+                return
 
             log_history = []
             
@@ -105,7 +106,8 @@ def create_ui():
                 log_history.append(f"[{timestamp}] {msg}")
                 return "\n".join(log_history)
 
-            yield update_logs("Iniciando Pipeline Auralith..."), gr.update(visible=False), gr.update(visible=False)
+            # 1. TRAVA O BOTÃO: Enviamos gr.update(interactive=False) no início
+            yield update_logs("Iniciando Pipeline..."), gr.update(visible=False), gr.update(visible=False), gr.update(interactive=False)
             
             config = {
                 "name": name, "duration": duration, "prompt": prompt,
@@ -114,39 +116,48 @@ def create_ui():
                 "constraints": ["no abrupt changes", "smooth transitions"] if abrupt else ["smooth transitions"]
             }
 
-            yield update_logs(f"Prompt Gerado: {prompt} | Style: {vibe}"), gr.update(visible=False), gr.update(visible=False)
+            # Callback para logs em tempo real
+            def progress_hook(m):
+                log_history.append(f"[{datetime.now().strftime('%H:%M:%S')}] {m}")
 
-            result = service.generate_music(
-                config=config, 
-                progress_callback=lambda m: log_history.append(f"[{datetime.now().strftime('%H:%M:%S')}] {m}")
-            )
+            result = service.generate_music(config=config, progress_callback=progress_hook)
 
             if result["success"]:
-                final_logs = "\n".join(log_history)
-                yield final_logs, gr.update(value=result["file_path"], visible=True), gr.update(value=result["file_path"], visible=True)
+                # 2. LIBERA O BOTÃO: Enviamos gr.update(interactive=True) no final
+                yield (
+                    "\n".join(log_history), 
+                    gr.update(value=result["file_path"], visible=True), 
+                    gr.update(value=result["file_path"], visible=True),
+                    gr.update(interactive=True)
+                )
             else:
-                yield update_logs(f"ERRO: {result['error']}"), gr.update(visible=False), gr.update(visible=False)
+                yield (
+                    update_logs(f"ERRO: {result['error']}"), 
+                    gr.update(visible=False), 
+                    gr.update(visible=False),
+                    gr.update(interactive=True)
+                )
 
+        # Configuração do clique com trava
         generate_btn.click(
             fn=run_generation,
             inputs=[name_input, duration_input, prompt_input, bpm_min, bpm_max, vibe_input, instruments_input, no_abrupt],
-            outputs=[status_output, file_output, audio_preview]
+            # Note que adicionamos generate_btn na saída (outputs) para poder controlar sua interatividade
+            outputs=[status_output, file_output, audio_preview, generate_btn]
         )
 
         def clear_form():
-            return "", 60, "", 40, 60, "calm", ["piano", "soft drums"], True, "", gr.update(visible=False), gr.update(visible=False)
+            return "", 60, "", 40, 60, "calm", ["piano", "soft drums"], True, "", gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True)
 
         clear_btn.click(
             fn=clear_form,
-            outputs=[name_input, duration_input, prompt_input, bpm_min, bpm_max, vibe_input, instruments_input, no_abrupt, status_output, file_output, audio_preview]
+            outputs=[name_input, duration_input, prompt_input, bpm_min, bpm_max, vibe_input, instruments_input, no_abrupt, status_output, file_output, audio_preview, generate_btn]
         )
 
     return demo
 
-# Define a interface global
 interface = create_ui()
 
-# Launch modificado para suportar CSS e Temas corretamente na v6
 if __name__ == "__main__":
     interface.launch(
         server_name="0.0.0.0", 
