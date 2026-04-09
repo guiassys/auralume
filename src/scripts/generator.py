@@ -1,21 +1,19 @@
 import logging
 import os
-import random
 import re
+import torch
 import soundfile as sf
 import numpy as np
 import time
 from datetime import datetime
 
-from src.scripts.music_pipeline import MusicPipeline
+# Importes corrigidos de acordo com sua estrutura
+from scripts.musicgen_pipeline import MusicPipeline 
 from src.scripts.musicgen_engine import MusicGenEngine
-from src.scripts.prompts import LOFI_PROMPTS
-
 
 def sanitize_filename(name: str) -> str:
-    name = re.sub(r"[^\w\- ]+", "", name)
+    name = re.sub(r"[^\w\- ]+", "", name or "")
     return name.strip().replace(" ", "_")
-
 
 class LofiGenerator:
     def __init__(self, output_dir: str = "."):
@@ -24,64 +22,63 @@ class LofiGenerator:
         self.logger = logging.getLogger(__name__)
         self.output_dir = output_dir
 
-    def generate(self, prompt=None, duration=None, name=None):
-        if duration is None:
-            try:
-                duration = int(input("Digite a duração da música em segundos (padrão 180): ") or 180)
-            except ValueError:
-                duration = 180
-                print("Valor inválido, usando 180 segundos.")
+    def generate(self, config: dict):
+        prompt = config.get("prompt", "lofi music")
+        duration = int(config.get("duration", 180))
+        name = config.get("name")
+        
+        final_prompt = self.pipeline.build(
+            prompt=prompt,
+            duration=duration,
+            style=self._build_style(
+                config.get("bpm_min", 60),
+                config.get("bpm_max", 80),
+                config.get("vibe", "calm"),
+                config.get("instruments", []),
+                config.get("constraints", [])
+            )
+        )
 
-        if prompt is None:
-            prompt = random.choice(LOFI_PROMPTS)
-
-        final_prompt = self.pipeline.build(prompt=prompt, duration=duration, style=prompt)
-        self.logger.info("[LOFI GEN] Prompt de geração final: %s", final_prompt)
-
+        self.logger.info("[LOFI GEN] Iniciando geração...")
         start_time = time.time()
+
+        # Chama o Engine corrigido
         wav, sr = self.engine.generate(final_prompt, duration)
-        end_time = time.time()
 
-        print(f"\n[LOFI GEN] Tempo total de geração: {end_time - start_time:.2f} segundos")
+        # Processamento Final
+        wav = self._to_numpy(wav)
+        wav = self._normalize(wav)
 
-        return self.save_audio(wav, sr, final_prompt, name, self.output_dir)
+        self._print_time_results(start_time, time.time())
+        return self.save_audio(wav, sr, prompt, name)
 
-    def save_audio(self, wav, sample_rate, prompt, name=None, output_dir: str = "."):
-        print("\n[LOFI GEN] Salvando áudio...")
+    def _build_style(self, bpm_min, bpm_max, vibe, instruments, constraints):
+        instruments_text = ", ".join(instruments) if instruments else "lo-fi instrumentation"
+        constraints_text = ". ".join(constraints) if constraints else "smooth transitions"
+        return f"{bpm_min}-{bpm_max} BPM, {vibe}, {instruments_text}, {constraints_text}"
 
-        # 🔹 Caso venha como lista
-        if isinstance(wav, list):
-            wav = wav[0]
-
-        # 🔥 CORREÇÃO PRINCIPAL (CUDA → CPU → NumPy)
-        if hasattr(wav, "detach"):
+    def _to_numpy(self, wav):
+        if torch.is_tensor(wav):
             wav = wav.detach().cpu().numpy()
+        return np.array(wav).astype(np.float32)
 
-        # Garante formato correto
-        if wav.dtype == np.float16:
-            wav = wav.astype(np.float32)
+    def _normalize(self, wav):
+        wav = np.nan_to_num(wav)
+        peak = np.max(np.abs(wav))
+        if peak > 0:
+            wav = wav / peak
+        return wav
 
-        if wav.ndim > 1:
-            wav = wav.reshape(-1)
+    def _print_time_results(self, start, end):
+        total = int(end - start)
+        print(f"[LOFI GEN] Tempo total: {total//60:02d}:{total%60:02d}")
 
+    def save_audio(self, wav, sample_rate, prompt, name=None):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-        if name:
-            file_base = sanitize_filename(name)
-            if not file_base:
-                file_base = f"lofi_{timestamp}"
-        else:
-            file_base = f"lofi_{abs(hash(prompt)) % 10000}_{timestamp}"
-
-        # Garante que o diretório existe
-        os.makedirs(output_dir, exist_ok=True)
-
-        # Caminho final
-        file_path = os.path.join(output_dir, f"{file_base}.wav")
-
-        # Salva o áudio
-        sf.write(file_path, wav, sample_rate)
-
-        print(f"[FINAL] Arquivo gerado: {file_path}")
-
+        file_base = sanitize_filename(name) if name else f"lofi_{timestamp}"
+        
+        os.makedirs(self.output_dir, exist_ok=True)
+        file_path = os.path.join(self.output_dir, f"{file_base}.wav")
+        
+        sf.write(file_path, wav, sample_rate, subtype="PCM_16")
         return file_path
