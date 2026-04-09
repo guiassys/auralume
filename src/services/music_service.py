@@ -40,18 +40,18 @@ class MusicGenerationService:
         # Tenta adquirir o lock. Se a GPU estiver ocupada, ele aguarda.
         with self._lock:
             try:
-                logger.info(f"[SERVICE] Iniciando processo para o projeto: {config.get('name', 'Sem Nome')}")
-                logger.debug(f"[SERVICE] Parâmetros recebidos: {config}")
+                logger.info(f"[SERVICE] Starting the process for the project.: {config.get('name', 'No name')}")
+                logger.debug(f"[SERVICE] Parameters received: {config}")
 
                 if progress_callback:
-                    progress_callback("📡 Sincronizando com a GPU e carregando modelos...")
+                    progress_callback("📡 Synchronizing with the GPU and loading models...")
 
                 # Chamada para o gerador (que internamente gerencia os chunks e o crossfade)
                 # O gerador agora é seguro contra estouro de tokens (30s chunks)
                 file_path = self.generator.generate(config=config)
 
                 if progress_callback:
-                    progress_callback(f"✅ Sucesso! Masterizado em: {os.path.basename(file_path)}")
+                    progress_callback(f"✅ Success! Mastered in: {os.path.basename(file_path)}")
 
                 return {
                     "success": True,
@@ -61,7 +61,7 @@ class MusicGenerationService:
 
             except Exception as e:
                 # Captura erros de CUDA, Memória ou Arquivo
-                error_msg = f"Falha no processamento: {str(e)}"
+                error_msg = f"Processing failure: {str(e)}"
                 logger.error(f"[SERVICE] {error_msg}", exc_info=True)
 
                 if progress_callback:

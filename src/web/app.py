@@ -39,17 +39,17 @@ def create_ui():
             # --- PAINEL DE CONTROLE (ESQUERDA) ---
             with gr.Column(scale=2):
                 with gr.Group():
-                    gr.Markdown("### 🎹 Definições da Track")
-                    name_input = gr.Textbox(label="Nome do Projeto", placeholder="Ex: Chill_Rain_Session")
+                    gr.Markdown("### 🎹 Track Definitions")
+                    name_input = gr.Textbox(label="Project name", placeholder="Ex: Chill_Rain_Session")
                     prompt_input = gr.Textbox(
-                        label="Tema Musical (Prompt)", 
+                        label="Musical Theme (Prompt)", 
                         placeholder="Ex: lofi, piano, rainy city, nostalgic",
                         lines=3
                     )
                     
                     with gr.Row():
                         duration_input = gr.Dropdown(
-                            label="Duração", 
+                            label="Duration (seconds)", 
                             choices=[30, 60, 90, 180, 300], 
                             value=60
                         )
@@ -60,28 +60,28 @@ def create_ui():
                         )
 
                 with gr.Group():
-                    gr.Markdown("### 🎚️ Ajustes de Estúdio")
+                    gr.Markdown("### 🎚️ Studio Adjustments")
                     with gr.Row():
                         bpm_min = gr.Slider(label="BPM Min", minimum=30, maximum=120, value=40, step=1)
                         bpm_max = gr.Slider(label="BPM Max", minimum=30, maximum=140, value=60, step=1)
                     
                     instruments_input = gr.CheckboxGroup(
-                        label="Instrumentos",
+                        label="Instruments",
                         choices=["piano", "jazz piano", "vinyl noise", "soft drums", "electric bass", "pads", "synth"],
                         value=["piano", "soft drums"]
                     )
-                    no_abrupt = gr.Checkbox(label="Evitar mudanças bruscas (Smooth Transitions)", value=True)
+                    no_abrupt = gr.Checkbox(label="Avoiding abrupt changes (Smooth Transitions)", value=True)
 
                 with gr.Row():
-                    clear_btn = gr.Button("🗑️ Limpar")
+                    clear_btn = gr.Button("🗑️ Clean")
                     # Botão que será travado
-                    generate_btn = gr.Button("🎵 GERAR MÚSICA", variant="primary", elem_classes=["generate-btn"])
+                    generate_btn = gr.Button("🎵 GENERATE MUSIC", variant="primary", elem_classes=["generate-btn"])
 
             # --- PAINEL DE MONITORAMENTO (DIREITA) ---
             with gr.Column(scale=3):
                 gr.Markdown("### 🖥️ Studio Console")
                 status_output = gr.Textbox(
-                    label="Status do Motor de IA",
+                    label="AI Engine Status",
                     lines=12,
                     interactive=False,
                     elem_classes=["terminal-box"]
@@ -96,7 +96,7 @@ def create_ui():
         def run_generation(name, duration, prompt, b_min, b_max, vibe, inst, abrupt):
             if not prompt.strip():
                 # Reativa o botão se houver erro de validação
-                yield "❌ Erro: Por favor, insira um tema musical.", gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True)
+                yield "❌ Error: Please enter a musical theme.", gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True)
                 return
 
             log_history = []
@@ -107,7 +107,7 @@ def create_ui():
                 return "\n".join(log_history)
 
             # 1. TRAVA O BOTÃO: Enviamos gr.update(interactive=False) no início
-            yield update_logs("Iniciando Pipeline..."), gr.update(visible=False), gr.update(visible=False), gr.update(interactive=False)
+            yield update_logs("Starting Pipeline..."), gr.update(visible=False), gr.update(visible=False), gr.update(interactive=False)
             
             config = {
                 "name": name, "duration": duration, "prompt": prompt,

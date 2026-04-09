@@ -42,17 +42,17 @@ A interface deve permitir que o usuário:
 - Botão para limpar o formulário para realizar uma nova geração de musica.
 
 ### Durante o processamento
- - Exibir informações do prompt que foi utilizado. Ex: [LOFI GEN] Prompt: instrumental; acustic guitar; lofi; Anjo da noite. Style: 40-60 BPM, warm, piano, soft drums, vinyl noise, jazz piano, no abrupt changes. smooth transitions. Duration: 180 seconds.
+ - Exibir informações do prompt que foi utilizado. Ex: [AURALITH GEN] Prompt: instrumental; acustic guitar; lofi; Anjo da noite. Style: 40-60 BPM, warm, piano, soft drums, vinyl noise, jazz piano, no abrupt changes. smooth transitions. Duration: 180 seconds.
  - Bloquear o botão "Gerar Música" enquanto o processo estiver em andamento
  - Exibir o progresso do aplicativo como um terminal de log: Ex:
-[LOFI GEN] Chunk 1/8
-[LOFI GEN] Chunk 2/8
-[LOFI GEN] Chunk 3/8
-[LOFI GEN] Chunk 4/8
-[LOFI GEN] Chunk 5/8
-[LOFI GEN] Chunk 6/8
-[LOFI GEN] Chunk 7/8
-[LOFI GEN] Chunk 8/8
+[AURALITH GEN] Chunk 1/8
+[AURALITH GEN] Chunk 2/8
+[AURALITH GEN] Chunk 3/8
+[AURALITH GEN] Chunk 4/8
+[AURALITH GEN] Chunk 5/8
+[AURALITH GEN] Chunk 6/8
+[AURALITH GEN] Chunk 7/8
+[AURALITH GEN] Chunk 8/8
 
 Reutilizar os logs que já estão em uso no script principal para geração da musica
 

@@ -15,7 +15,7 @@ class MusicGenEngine:
             log.info(f"Using GPU: {torch.cuda.get_device_name(0)}")
         else:
             self.device = torch.device('cpu')
-            log.error("CUDA NÃO está funcionando. Usando CPU.")
+            log.error("CUDA is not working. Using CPU. Performance will be very slow.")
 
         self.processor = AutoProcessor.from_pretrained(self.model_name)
         self.model = MusicgenForConditionalGeneration.from_pretrained(
@@ -34,12 +34,12 @@ class MusicGenEngine:
         return (a[-overlap:] * fade_out + b[:overlap] * fade_in)
 
     def generate(self, prompt, duration):
-        print(f"\n[LOFI GEN] Prompt: {prompt}")
+        print(f"\n[AURALITH GEN] Prompt: {prompt}")
 
         # 🔧 CONFIGURAÇÃO SEGURA
         sample_rate = 32000
         chunk_duration = 30  # LIMITE DO MODELO (1500 tokens)
-        overlap_sec = 5
+        overlap_sec = 10
         overlap = int(sample_rate * overlap_sec)
 
         # Cálculo de chunks considerando que cada novo chunk sobrepõe o anterior
@@ -56,7 +56,7 @@ class MusicGenEngine:
 
         with torch.no_grad():
             for i in range(num_chunks):
-                print(f"[LOFI GEN] Chunk {i+1}/{num_chunks}")
+                print(f"[AURALITH GEN] Chunk {i+1}/{num_chunks}")
 
                 # 1500 tokens é o limite para MusicGen
                 max_tokens = 1500 

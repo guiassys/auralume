@@ -34,7 +34,7 @@ class LofiGenerator:
         self.logger.setLevel(logging.INFO)
 
     def generate(self, config: Dict[str, Any]) -> str:
-        """Gera música lo-fi com base na configuração."""
+        """Gera música com base na configuração."""
         prompt = config.get("prompt", "lofi music")
         duration = self._safe_int(config.get("duration", 180), default=180)
         name = config.get("name")
@@ -53,7 +53,7 @@ class LofiGenerator:
             style=style
         )
 
-        self.logger.info("[LOFI GEN] Iniciando geração...")
+        self.logger.info("[AURALITH GEN] Starting generation...")
         start_time = time.time()
 
         wav, sr = self.engine.generate(final_prompt, duration)
@@ -80,7 +80,7 @@ class LofiGenerator:
         instruments_text = ", ".join(instruments) if instruments else "lo-fi instrumentation"
         constraints_text = ". ".join(constraints) if constraints else "smooth transitions"
 
-        return f"{bpm_min}-{bpm_max} BPM, {vibe}, {instruments_text}, {constraints_text}"
+        return f"{bpm_min}-{bpm_max} Beats Per Minute (BPM), {vibe}, {instruments_text}, {constraints_text}"
 
     def _to_numpy(self, wav: Any) -> np.ndarray:
         if torch.is_tensor(wav):
@@ -90,7 +90,7 @@ class LofiGenerator:
 
     def _normalize(self, wav: np.ndarray) -> np.ndarray:
         if wav.size == 0:
-            self.logger.warning("[LOFI GEN] Áudio vazio recebido.")
+            self.logger.warning("[AURALITH GEN] Empty audio received.")
             return wav
 
         wav = np.nan_to_num(wav)
@@ -105,12 +105,12 @@ class LofiGenerator:
         try:
             return int(value)
         except (TypeError, ValueError):
-            self.logger.warning(f"[LOFI GEN] Valor inválido para inteiro: {value}, usando {default}")
+            self.logger.warning(f"[AURALITH GEN] Invalid value for integer: {value}, using {default}")
             return default
 
     def _log_time(self, start: float, end: float) -> None:
         total = int(end - start)
-        self.logger.info(f"[LOFI GEN] Tempo total: {total // 60:02d}:{total % 60:02d}")
+        self.logger.info(f"[AURALITH GEN] Total time: {total // 60:02d}:{total % 60:02d}")
 
     # --------------------------
     # Persistência
@@ -131,6 +131,6 @@ class LofiGenerator:
 
         sf.write(file_path, wav, sample_rate, subtype="PCM_16")
 
-        self.logger.info(f"[LOFI GEN] Arquivo salvo em: {file_path}")
+        self.logger.info(f"[AURALITH GEN] File saved in: {file_path}")
 
         return file_path
