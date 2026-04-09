@@ -1,84 +1,136 @@
 import logging
 import os
 import re
-import torch
-import soundfile as sf
-import numpy as np
 import time
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
-# Importes corrigidos de acordo com sua estrutura
-from scripts.musicgen_pipeline import MusicPipeline 
+import numpy as np
+import soundfile as sf
+import torch
+
+# Importes existentes (mantidos)
+from scripts.musicgen_pipeline import MusicPipeline
 from src.scripts.musicgen_engine import MusicGenEngine
 
-def sanitize_filename(name: str) -> str:
+
+def sanitize_filename(name: Optional[str]) -> str:
+    """Remove caracteres inválidos e normaliza nome de arquivo."""
     name = re.sub(r"[^\w\- ]+", "", name or "")
     return name.strip().replace(" ", "_")
 
+
 class LofiGenerator:
-    def __init__(self, output_dir: str = "."):
-        self.engine = MusicGenEngine(model_size="medium")
+    def __init__(
+        self,
+        output_dir: str = ".",
+        engine: Optional[MusicGenEngine] = None
+    ):
+        self.engine = engine or MusicGenEngine(model_size="medium")
         self.pipeline = MusicPipeline()
-        self.logger = logging.getLogger(__name__)
         self.output_dir = output_dir
 
-    def generate(self, config: dict):
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+
+    def generate(self, config: Dict[str, Any]) -> str:
+        """Gera música lo-fi com base na configuração."""
         prompt = config.get("prompt", "lofi music")
-        duration = int(config.get("duration", 180))
+        duration = self._safe_int(config.get("duration", 180), default=180)
         name = config.get("name")
-        
+
+        style = self._build_style(
+            bpm_min=config.get("bpm_min", 60),
+            bpm_max=config.get("bpm_max", 80),
+            vibe=config.get("vibe", "calm"),
+            instruments=config.get("instruments", []),
+            constraints=config.get("constraints", [])
+        )
+
         final_prompt = self.pipeline.build(
             prompt=prompt,
             duration=duration,
-            style=self._build_style(
-                config.get("bpm_min", 60),
-                config.get("bpm_max", 80),
-                config.get("vibe", "calm"),
-                config.get("instruments", []),
-                config.get("constraints", [])
-            )
+            style=style
         )
 
         self.logger.info("[LOFI GEN] Iniciando geração...")
         start_time = time.time()
 
-        # Chama o Engine corrigido
         wav, sr = self.engine.generate(final_prompt, duration)
 
-        # Processamento Final
         wav = self._to_numpy(wav)
         wav = self._normalize(wav)
 
-        self._print_time_results(start_time, time.time())
+        self._log_time(start_time, time.time())
+
         return self.save_audio(wav, sr, prompt, name)
 
-    def _build_style(self, bpm_min, bpm_max, vibe, instruments, constraints):
+    # --------------------------
+    # Helpers internos
+    # --------------------------
+
+    def _build_style(
+        self,
+        bpm_min: int,
+        bpm_max: int,
+        vibe: str,
+        instruments: List[str],
+        constraints: List[str]
+    ) -> str:
         instruments_text = ", ".join(instruments) if instruments else "lo-fi instrumentation"
         constraints_text = ". ".join(constraints) if constraints else "smooth transitions"
+
         return f"{bpm_min}-{bpm_max} BPM, {vibe}, {instruments_text}, {constraints_text}"
 
-    def _to_numpy(self, wav):
+    def _to_numpy(self, wav: Any) -> np.ndarray:
         if torch.is_tensor(wav):
             wav = wav.detach().cpu().numpy()
-        return np.array(wav).astype(np.float32)
 
-    def _normalize(self, wav):
+        return np.asarray(wav, dtype=np.float32)
+
+    def _normalize(self, wav: np.ndarray) -> np.ndarray:
+        if wav.size == 0:
+            self.logger.warning("[LOFI GEN] Áudio vazio recebido.")
+            return wav
+
         wav = np.nan_to_num(wav)
+
         peak = np.max(np.abs(wav))
         if peak > 0:
             wav = wav / peak
+
         return wav
 
-    def _print_time_results(self, start, end):
-        total = int(end - start)
-        print(f"[LOFI GEN] Tempo total: {total//60:02d}:{total%60:02d}")
+    def _safe_int(self, value: Any, default: int) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            self.logger.warning(f"[LOFI GEN] Valor inválido para inteiro: {value}, usando {default}")
+            return default
 
-    def save_audio(self, wav, sample_rate, prompt, name=None):
+    def _log_time(self, start: float, end: float) -> None:
+        total = int(end - start)
+        self.logger.info(f"[LOFI GEN] Tempo total: {total // 60:02d}:{total % 60:02d}")
+
+    # --------------------------
+    # Persistência
+    # --------------------------
+
+    def save_audio(
+        self,
+        wav: np.ndarray,
+        sample_rate: int,
+        prompt: str,
+        name: Optional[str] = None
+    ) -> str:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         file_base = sanitize_filename(name) if name else f"lofi_{timestamp}"
-        
+
         os.makedirs(self.output_dir, exist_ok=True)
         file_path = os.path.join(self.output_dir, f"{file_base}.wav")
-        
+
         sf.write(file_path, wav, sample_rate, subtype="PCM_16")
+
+        self.logger.info(f"[LOFI GEN] Arquivo salvo em: {file_path}")
+
         return file_path
