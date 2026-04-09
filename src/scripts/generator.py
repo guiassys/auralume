@@ -1,136 +1,97 @@
 import logging
 import os
-import re
-import time
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
-
 import numpy as np
 import soundfile as sf
-import torch
+from datetime import datetime
+from typing import Dict, Any, Optional
 
-# Importes existentes (mantidos)
 from scripts.musicgen_pipeline import MusicPipeline
 from src.scripts.musicgen_engine import MusicGenEngine
 
 
-def sanitize_filename(name: Optional[str]) -> str:
-    """Remove caracteres inválidos e normaliza nome de arquivo."""
-    name = re.sub(r"[^\w\- ]+", "", name or "")
-    return name.strip().replace(" ", "_")
-
-
 class LofiGenerator:
-    def __init__(
-        self,
-        output_dir: str = ".",
-        engine: Optional[MusicGenEngine] = None
-    ):
-        self.engine = engine or MusicGenEngine(model_size="medium")
+
+    def __init__(self, output_dir="outputs"):
+        self.engine = MusicGenEngine()
         self.pipeline = MusicPipeline()
         self.output_dir = output_dir
 
         self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.INFO)
 
     def generate(self, config: Dict[str, Any]) -> str:
-        """Gera música com base na configuração."""
+
         prompt = config.get("prompt", "lofi music")
-        duration = self._safe_int(config.get("duration", 180), default=180)
+        duration = int(config.get("duration", 180))
         name = config.get("name")
 
-        style = self._build_style(
-            bpm_min=config.get("bpm_min", 60),
-            bpm_max=config.get("bpm_max", 80),
-            vibe=config.get("vibe", "calm"),
-            instruments=config.get("instruments", []),
-            constraints=config.get("constraints", [])
-        )
+        style = config.get("style", "lofi chill")
 
-        final_prompt = self.pipeline.build(
-            prompt=prompt,
-            duration=duration,
-            style=style
-        )
+        self.logger.info("[GENERATOR] Running pipeline")
 
-        self.logger.info("[AURALITH GEN] Starting generation...")
-        start_time = time.time()
+        plan = self.pipeline.build(prompt, duration, style)
 
-        wav, sr = self.engine.generate(final_prompt, duration)
+        full_audio = []
+        sample_rate = None
 
-        wav = self._to_numpy(wav)
-        wav = self._normalize(wav)
+        for section in plan["sections"]:
+            self.logger.info(f"[GENERATOR] Section: {section['name']}")
 
-        self._log_time(start_time, time.time())
+            audio, sr = self.engine.generate_section(
+                section["prompt"],
+                section["duration"]
+            )
 
-        return self.save_audio(wav, sr, prompt, name)
+            sample_rate = sr
 
-    # --------------------------
-    # Helpers internos
-    # --------------------------
+            audio_np = audio.numpy()
 
-    def _build_style(
-        self,
-        bpm_min: int,
-        bpm_max: int,
-        vibe: str,
-        instruments: List[str],
-        constraints: List[str]
-    ) -> str:
-        instruments_text = ", ".join(instruments) if instruments else "lo-fi instrumentation"
-        constraints_text = ". ".join(constraints) if constraints else "smooth transitions"
+            full_audio.append(audio_np)
 
-        return f"{bpm_min}-{bpm_max} Beats Per Minute (BPM), {vibe}, {instruments_text}, {constraints_text}"
+        final_audio = self._merge_sections(full_audio)
 
-    def _to_numpy(self, wav: Any) -> np.ndarray:
-        if torch.is_tensor(wav):
-            wav = wav.detach().cpu().numpy()
+        final_audio = self._normalize(final_audio)
 
-        return np.asarray(wav, dtype=np.float32)
+        return self._save(final_audio, sample_rate, name)
 
-    def _normalize(self, wav: np.ndarray) -> np.ndarray:
-        if wav.size == 0:
-            self.logger.warning("[AURALITH GEN] Empty audio received.")
-            return wav
+    # -----------------------------
+    # AUDIO ENGINEERING
+    # -----------------------------
+    def _merge_sections(self, sections):
 
-        wav = np.nan_to_num(wav)
+        self.logger.info("[POST] Merging sections with transitions")
 
-        peak = np.max(np.abs(wav))
-        if peak > 0:
-            wav = wav / peak
+        merged = sections[0]
 
-        return wav
+        for nxt in sections[1:]:
+            overlap = 20000
 
-    def _safe_int(self, value: Any, default: int) -> int:
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            self.logger.warning(f"[AURALITH GEN] Invalid value for integer: {value}, using {default}")
-            return default
+            fade_out = np.linspace(1, 0, overlap)
+            fade_in = np.linspace(0, 1, overlap)
 
-    def _log_time(self, start: float, end: float) -> None:
-        total = int(end - start)
-        self.logger.info(f"[AURALITH GEN] Total time: {total // 60:02d}:{total % 60:02d}")
+            cross = merged[-overlap:] * fade_out + nxt[:overlap] * fade_in
 
-    # --------------------------
-    # Persistência
-    # --------------------------
+            merged = np.concatenate([
+                merged[:-overlap],
+                cross,
+                nxt[overlap:]
+            ])
 
-    def save_audio(
-        self,
-        wav: np.ndarray,
-        sample_rate: int,
-        prompt: str,
-        name: Optional[str] = None
-    ) -> str:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        file_base = sanitize_filename(name) if name else f"lofi_{timestamp}"
+        return merged
+
+    def _normalize(self, audio):
+
+        peak = np.max(np.abs(audio))
+        return audio / peak if peak > 0 else audio
+
+    def _save(self, audio, sr, name: Optional[str]):
 
         os.makedirs(self.output_dir, exist_ok=True)
-        file_path = os.path.join(self.output_dir, f"{file_base}.wav")
 
-        sf.write(file_path, wav, sample_rate, subtype="PCM_16")
+        filename = name or datetime.now().strftime("%Y%m%d_%H%M%S")
+        path = os.path.join(self.output_dir, f"{filename}.wav")
 
-        self.logger.info(f"[AURALITH GEN] File saved in: {file_path}")
+        sf.write(path, audio, sr)
 
-        return file_path
+        self.logger.info(f"[GENERATOR] Saved: {path}")
+
+        return path

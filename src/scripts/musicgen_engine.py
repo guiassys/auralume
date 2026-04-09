@@ -1,97 +1,92 @@
 import logging as log
 import torch
 import math
-import numpy as np
+from typing import Optional
 from transformers import MusicgenForConditionalGeneration, AutoProcessor
 
-class MusicGenEngine:
-    def __init__(self, model_size="medium"):
-        self.model_name = f"facebook/musicgen-{model_size}"
 
-        log.info(f'[MusicGenEngine] Loading model: {self.model_name}')
+class MusicGenEngine:
+    _instance = None  # Singleton
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(MusicGenEngine, cls).__new__(cls)
+        return cls._instance
+
+    def __init__(self, model_size="medium"):
+        if hasattr(self, "_initialized"):
+            return
+
+        self.model_name = f"facebook/musicgen-{model_size}"
+        log.info(f"[MusicGenEngine] Loading model: {self.model_name}")
 
         if torch.cuda.is_available():
-            self.device = torch.device('cuda')
+            self.device = torch.device("cuda")
             log.info(f"Using GPU: {torch.cuda.get_device_name(0)}")
         else:
-            self.device = torch.device('cpu')
-            log.error("CUDA is not working. Using CPU. Performance will be very slow.")
+            self.device = torch.device("cpu")
+            log.error("CUDA not available. Using CPU.")
 
         self.processor = AutoProcessor.from_pretrained(self.model_name)
         self.model = MusicgenForConditionalGeneration.from_pretrained(
             self.model_name,
             torch_dtype=torch.float16 if self.device.type == "cuda" else torch.float32
-        )
+        ).to(self.device)
 
-        self.model = self.model.to(self.device)
         self.model.eval()
+        self._initialized = True
 
-    def _crossfade(self, a, b, overlap):
-        """Faz transição suave entre dois áudios"""
-        fade_out = torch.linspace(1, 0, overlap)
-        fade_in = torch.linspace(0, 1, overlap)
-        # Garante que os fades estejam no mesmo dispositivo que os chunks
-        return (a[-overlap:] * fade_out + b[:overlap] * fade_in)
+    def generate_section(self, prompt: str, duration: int):
+        """Generate a single structured section"""
+        log.info(f"[ENGINE] Generating section: {prompt[:60]}...")
 
-    def generate(self, prompt, duration):
-        print(f"\n[AURALITH GEN] Prompt: {prompt}")
-
-        # 🔧 CONFIGURAÇÃO SEGURA
         sample_rate = 32000
-        chunk_duration = 30  # LIMITE DO MODELO (1500 tokens)
-        overlap_sec = 10
+        chunk_duration = 30
+        overlap_sec = 5
         overlap = int(sample_rate * overlap_sec)
 
-        # Cálculo de chunks considerando que cada novo chunk sobrepõe o anterior
-        effective_chunk_time = chunk_duration - overlap_sec
-        num_chunks = math.ceil(duration / effective_chunk_time)
-        
-        total_audio = []
+        effective_chunk = chunk_duration - overlap_sec
+        num_chunks = math.ceil(duration / effective_chunk)
 
         inputs = self.processor(
             text=[prompt],
-            padding=True,
-            return_tensors="pt"
+            return_tensors="pt",
+            padding=True
         ).to(self.device)
+
+        chunks = []
 
         with torch.no_grad():
             for i in range(num_chunks):
-                print(f"[AURALITH GEN] Chunk {i+1}/{num_chunks}")
+                log.info(f"[ENGINE] Chunk {i+1}/{num_chunks}")
 
-                # 1500 tokens é o limite para MusicGen
-                max_tokens = 1500 
-
-                chunk = self.model.generate(
+                audio = self.model.generate(
                     **inputs,
-                    max_new_tokens=max_tokens,
+                    max_new_tokens=1500,
                     do_sample=True,
                     top_k=250,
                     top_p=0.95,
                     temperature=1.0
                 )
 
-                # Limpeza de dimensões: de [1, 1, samples] para [samples]
-                chunk = chunk.detach().cpu().squeeze()
+                audio = audio.squeeze().cpu()
 
-                if i == 0:
-                    total_audio.append(chunk)
+                if not chunks:
+                    chunks.append(audio)
                 else:
-                    prev = total_audio[-1]
-                    
-                    if len(prev) > overlap and len(chunk) > overlap:
-                        mixed = self._crossfade(prev, chunk, overlap)
-                        merged = torch.cat([
-                            prev[:-overlap],
-                            mixed,
-                            chunk[overlap:]
-                        ])
-                        total_audio[-1] = merged
+                    prev = chunks[-1]
+
+                    if len(prev) > overlap and len(audio) > overlap:
+                        fade_out = torch.linspace(1, 0, overlap)
+                        fade_in = torch.linspace(0, 1, overlap)
+
+                        mixed = prev[-overlap:] * fade_out + audio[:overlap] * fade_in
+                        merged = torch.cat([prev[:-overlap], mixed, audio[overlap:]])
+                        chunks[-1] = merged
                     else:
-                        total_audio.append(chunk)
+                        chunks.append(audio)
 
-        # Concatena e corta para a duração exata pedida
-        audio = torch.cat(total_audio, dim=0)
-        target_length = int(duration * sample_rate)
-        audio = audio[:target_length]
+        final_audio = torch.cat(chunks)
+        target_len = duration * sample_rate
 
-        return audio, sample_rate
+        return final_audio[:target_len], sample_rate
