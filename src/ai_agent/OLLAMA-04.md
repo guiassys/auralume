@@ -52,6 +52,7 @@ Forneça a implementação completa para os seguintes arquivos:
 1. `musicgen_engine.py`: Refatorado para suportar geração modular.
 2. `musicgen_pipeline.py`: O coração da lógica de estrutura usando LangChain.
 3. `generator.py`: A classe principal que orquestra o salvamento e a interface.
+4. `music_service.py` : A classe de serviço que invoca o processamento.
 
 ---
 
