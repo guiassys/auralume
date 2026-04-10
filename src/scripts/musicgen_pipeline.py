@@ -1,14 +1,16 @@
 import logging
 import numpy as np
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+
 from langchain_core.runnables import RunnableLambda, RunnableSequence
 
 logger = logging.getLogger(__name__)
 
 
+# -----------------------------
+# VECTOR STORE (DIP ready)
+# -----------------------------
 class SimpleVectorStore:
-    """Lightweight FAISS-like store (pluggable futuramente)"""
-
     def __init__(self):
         self.vectors = []
         self.metadata = []
@@ -30,28 +32,19 @@ class SimpleVectorStore:
         return [self.metadata[i] for i, _ in sims[:k]]
 
 
-class MusicPipeline:
+# -----------------------------
+# EMBEDDING PROVIDER (SRP)
+# -----------------------------
+class EmbeddingProvider:
+    def embed(self, text: str) -> np.ndarray:
+        return np.random.rand(128)
 
-    def __init__(self):
-        self.vector_store = SimpleVectorStore()
 
-        self.pipeline = RunnableSequence(
-            RunnableLambda(self._architect_stage),
-            RunnableLambda(self._composition_stage)
-        )
-
-    def build(self, prompt: str, duration: int, style: str):
-        return self.pipeline.invoke({
-            "prompt": prompt,
-            "duration": duration,
-            "style": style
-        })
-
-    # -----------------------------
-    # STAGE 1 - ARCHITECT
-    # -----------------------------
-    def _architect_stage(self, inputs: Dict[str, Any]):
-
+# -----------------------------
+# ARCHITECT (SRP)
+# -----------------------------
+class MusicArchitect:
+    def build_structure(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         duration = inputs["duration"]
 
         logger.info("[ARCHITECT] Designing music structure")
@@ -76,11 +69,20 @@ class MusicPipeline:
             "key": key
         }
 
-    # -----------------------------
-    # STAGE 2 - COMPOSITION + RAG
-    # -----------------------------
-    def _composition_stage(self, inputs: Dict[str, Any]):
 
+# -----------------------------
+# COMPOSER (SRP + RAG)
+# -----------------------------
+class MusicComposer:
+    def __init__(
+        self,
+        vector_store: Optional[SimpleVectorStore] = None,
+        embedding_provider: Optional[EmbeddingProvider] = None,
+    ):
+        self.vector_store = vector_store or SimpleVectorStore()
+        self.embedding_provider = embedding_provider or EmbeddingProvider()
+
+    def compose(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         logger.info("[COMPOSER] Generating structured prompts")
 
         sections_output = []
@@ -92,20 +94,19 @@ class MusicPipeline:
         last_context = ""
 
         for section in inputs["structure"]:
-
-            # fake embedding (placeholder para CLAP)
-            embedding = np.random.rand(128)
+            embedding = self.embedding_provider.embed(section["name"])
 
             retrieved = self.vector_store.search(embedding)
-
             rag_context = " ".join([r["summary"] for r in retrieved])
 
-            section_prompt = (
-                f"{base_prompt}. Section: {section['name']}. "
-                f"{section['desc']}. "
-                f"BPM: {bpm}. Key: {key}. Style: {style}. "
-                f"Previous context: {last_context}. "
-                f"Memory: {rag_context}"
+            section_prompt = self._build_prompt(
+                base_prompt,
+                section,
+                style,
+                bpm,
+                key,
+                last_context,
+                rag_context
             )
 
             summary = f"{section['name']} with {section['desc']}"
@@ -125,3 +126,53 @@ class MusicPipeline:
             "bpm": bpm,
             "key": key
         }
+
+    def _build_prompt(
+        self,
+        base_prompt: str,
+        section: Dict[str, Any],
+        style: str,
+        bpm: int,
+        key: str,
+        last_context: str,
+        rag_context: str
+    ) -> str:
+        return (
+            f"{base_prompt}. Section: {section['name']}. "
+            f"{section['desc']}. "
+            f"BPM: {bpm}. Key: {key}. Style: {style}. "
+            f"Previous context: {last_context}. "
+            f"Memory: {rag_context}"
+        )
+
+
+# -----------------------------
+# PIPELINE (ORCHESTRATOR)
+# -----------------------------
+class MusicPipeline:
+
+    def __init__(
+        self,
+        architect: Optional[MusicArchitect] = None,
+        composer: Optional[MusicComposer] = None,
+    ):
+        self.architect = architect or MusicArchitect()
+        self.composer = composer or MusicComposer()
+
+        self.pipeline = RunnableSequence(
+            RunnableLambda(self._architect_stage),
+            RunnableLambda(self._composition_stage)
+        )
+
+    def build(self, prompt: str, duration: int, style: str):
+        return self.pipeline.invoke({
+            "prompt": prompt,
+            "duration": duration,
+            "style": style
+        })
+
+    def _architect_stage(self, inputs: Dict[str, Any]):
+        return self.architect.build_structure(inputs)
+
+    def _composition_stage(self, inputs: Dict[str, Any]):
+        return self.composer.compose(inputs)
