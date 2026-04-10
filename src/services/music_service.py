@@ -3,9 +3,11 @@
 import logging
 import os
 import threading
-from typing import Optional, Dict, Any, Callable
+import time
+from typing import Optional, Dict, Any
 
 from src.scripts.generator import LofiGenerator
+from src.web.log_stream import LogStream
 
 logger = logging.getLogger(__name__)
 
@@ -17,41 +19,39 @@ class MusicGenerationService:
 
     def __init__(self, output_dir: str = "outputs"):
         self.output_dir = output_dir
-        # Garante que a pasta de saída existe
         os.makedirs(self.output_dir, exist_ok=True)
-
-        # Inicializa o gerador (Engine de IA e Pipeline LangChain)
         self.generator = LofiGenerator(output_dir=self.output_dir)
-        
-        # Lock crucial para evitar condições de corrida na VRAM da GPU
         self._lock = threading.Lock()
 
     def generate_music(
         self,
         config: Dict[str, Any],
-        progress_callback: Optional[Callable[[str], None]] = None
+        log_stream: Optional[LogStream] = None
     ) -> Dict[str, Any]:
         """
-        Executa o pipeline de geração. 
-        O uso do 'with self._lock' garante que apenas uma música seja gerada por vez,
-        prevenindo erros de 'Out of Memory' na CUDA.
+        Executa o pipeline de geração com streaming de logs.
+        O uso do 'with self._lock' garante que apenas uma música seja gerada por vez.
         """
-        
-        # Tenta adquirir o lock. Se a GPU estiver ocupada, ele aguarda.
+        def _log(message: str, level: str = "INFO"):
+            logger.info(f"[SERVICE] {message}")
+            if log_stream:
+                log_stream.log(message, level)
+
         with self._lock:
+            start_time = time.time()
             try:
-                logger.info(f"[SERVICE] Starting the process for the project.: {config.get('name', 'No name')}")
-                logger.debug(f"[SERVICE] Parameters received: {config}")
+                _log(f"Starting the process for project: {config.get('name', 'Unnamed')}")
+                _log(f"Input parameters: {config}")
 
-                if progress_callback:
-                    progress_callback("📡 Synchronizing with the GPU and loading models...")
+                _log("Synchronizing with the GPU and loading models...")
 
-                # Chamada para o gerador (que internamente gerencia os chunks e o crossfade)
-                # O gerador agora é seguro contra estouro de tokens (30s chunks)
-                file_path = self.generator.generate(config=config)
+                file_path = self.generator.generate(config=config, log_stream=log_stream)
 
-                if progress_callback:
-                    progress_callback(f"✅ Success! Mastered in: {os.path.basename(file_path)}")
+                end_time = time.time()
+                processing_time = time.strftime("%H:%M:%S", time.gmtime(end_time - start_time))
+
+                _log(f"Total processing time: {processing_time}")
+                _log(f"Success! Mastered in: {os.path.basename(file_path)}")
 
                 return {
                     "success": True,
@@ -60,12 +60,9 @@ class MusicGenerationService:
                 }
 
             except Exception as e:
-                # Captura erros de CUDA, Memória ou Arquivo
                 error_msg = f"Processing failure: {str(e)}"
+                _log(error_msg, level="ERROR")
                 logger.error(f"[SERVICE] {error_msg}", exc_info=True)
-
-                if progress_callback:
-                    progress_callback(f"❌ {error_msg}")
 
                 return {
                     "success": False,

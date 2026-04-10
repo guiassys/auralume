@@ -8,6 +8,7 @@ import soundfile as sf
 
 from scripts.musicgen_pipeline import MusicPipeline
 from src.scripts.musicgen_engine import MusicGenEngine
+from src.web.log_stream import LogStream
 
 
 class AudioProcessor:
@@ -60,7 +61,6 @@ class LofiGenerator:
         saver: Optional[AudioSaver] = None,
     ):
         if saver and output_dir:
-            # Optional safeguard (can remove if you prefer flexibility)
             pass
 
         self.engine = engine or MusicGenEngine()
@@ -70,36 +70,54 @@ class LofiGenerator:
 
         self.logger = logging.getLogger(__name__)
 
-    def generate(self, config: Dict[str, Any]) -> str:
+    def generate(self, config: Dict[str, Any], log_stream: Optional[LogStream] = None) -> str:
         prompt = config.get("prompt", "lofi music")
         duration = int(config.get("duration", 180))
         name = config.get("name")
         style = config.get("style", "lofi chill")
 
-        self.logger.info("[GENERATOR] Running pipeline")
+        def _log(message: str):
+            self.logger.info(f"[GENERATOR] {message}")
+            if log_stream:
+                log_stream.log(message)
+
+        _log("Running music generation pipeline...")
 
         plan = self.pipeline.build(prompt, duration, style)
+        _log(f"Pipeline built. Plan includes {len(plan['sections'])} sections.")
 
-        sections_audio, sample_rate = self._generate_sections(plan)
+        sections_audio, sample_rate = self._generate_sections(plan, log_stream)
+        _log("All audio sections generated successfully.")
 
+        _log("Merging sections with crossfade...")
         final_audio = self.processor.merge_sections(sections_audio)
+        _log("Audio sections merged.")
+
+        _log("Normalizing final audio...")
         final_audio = self.processor.normalize(final_audio)
+        _log("Audio normalized.")
 
+        _log("Saving final audio file...")
         path = self.saver.save(final_audio, sample_rate, name)
-
-        self.logger.info(f"[GENERATOR] Saved: {path}")
+        _log(f"Audio saved successfully to: {os.path.basename(path)}")
 
         return path
 
     def generate_section(self, prompt: str, duration: int):
         return self.engine.generate_section(prompt, duration)
 
-    def _generate_sections(self, plan: Dict[str, Any]) -> Tuple[List[np.ndarray], int]:
+    def _generate_sections(self, plan: Dict[str, Any], log_stream: Optional[LogStream] = None) -> Tuple[List[np.ndarray], int]:
         full_audio = []
         sample_rate = None
+        total_sections = len(plan["sections"])
 
-        for section in plan["sections"]:
-            self.logger.info(f"[GENERATOR] Section: {section['name']}")
+        def _log(message: str):
+            self.logger.info(f"[GENERATOR] {message}")
+            if log_stream:
+                log_stream.log(message)
+
+        for i, section in enumerate(plan["sections"]):
+            _log(f"Generating chunk {i + 1}/{total_sections}: {section['name']} ({section['duration']}s)")
 
             audio, sr = self.generate_section(
                 section["prompt"],
@@ -108,5 +126,6 @@ class LofiGenerator:
 
             sample_rate = sr
             full_audio.append(audio.numpy())
+            _log(f"Chunk {i + 1}/{total_sections} finished.")
 
         return full_audio, sample_rate
