@@ -20,14 +20,19 @@ class AuralithTheme(Base):
             # Colors
             body_background_fill="*neutral_950",
             body_background_fill_dark="*neutral_950",
+            body_text_color="*neutral_50",
+            body_text_color_dark="*neutral_50",
+
             background_fill_primary="*neutral_900",
             background_fill_primary_dark="*neutral_900",
             background_fill_secondary="*neutral_800",
             background_fill_secondary_dark="*neutral_800",
+
             border_color_accent="*primary_500",
             border_color_accent_dark="*primary_500",
             border_color_primary="*neutral_700",
             border_color_primary_dark="*neutral_700",
+
             color_accent_soft="*primary_800",
             color_accent_soft_dark="*primary_800",
 
@@ -40,16 +45,23 @@ class AuralithTheme(Base):
             slider_color="*primary_500",
             slider_color_dark="*primary_500",
 
-            # For the terminal/console
-            input_background_fill="*neutral_900",
-            input_background_fill_dark="*neutral_900",
+            # Input fields
+            input_background_fill="*neutral_800",
+            input_background_fill_dark="*neutral_800",
             input_border_color="*neutral_700",
             input_border_color_dark="*neutral_700",
+            input_placeholder_color="*neutral_400",
+            input_placeholder_color_dark="*neutral_400",
         )
 
 auralith_theme = AuralithTheme()
 
 custom_css = """
+/* --- Global Input Text Color --- */
+.gradio-container .gr-input, .gradio-container .gr-textarea, .gradio-container .gr-dropdown {
+    color: #ffffff !important; /* White text for all inputs */
+}
+
 .terminal-box textarea {
     background-color: #0b0f14 !important;
     color: #00ff41 !important; /* Neon Green */
@@ -63,7 +75,8 @@ custom_css = """
     color: #ffffff;
     font-weight: bold;
 }
-.glowing-progress .progress-bar {
+/* Correctly target the slider's track fill for the progress bar effect */
+.glowing-progress .track-fill {
     background-color: #00ff41 !important; /* Neon Green */
     box-shadow: 0 0 5px #00ff41, 0 0 10px #00ff41;
 }
