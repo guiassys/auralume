@@ -1,168 +1,230 @@
-"""Interface Web profissional para o Auralith usando Gradio (Com trava de botão)."""
-
+"""
+Professional Web Interface for Auralith using Gradio with a DAW-inspired,
+dark-themed layout and real-time log streaming.
+"""
 import gradio as gr
 import logging
 import os
-from datetime import datetime
+import json
+import threading
+import time
 from src.services.music_service import MusicGenerationService
+from src.web.log_stream import LogStream
+from src.web.ui_theme import auralith_theme, custom_css
 
-# Configuração de Logs
-logging.basicConfig(level=logging.INFO)
+# --- Logging Configuration ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Inicialização do Serviço
+# --- Configuration Loading ---
+def load_app_settings():
+    """Loads instrument and default settings from config.json."""
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(base_path, "..", ".."))
+    config_path = os.path.join(project_root, "config.json")
+    
+    default_data = {
+        "instruments": ["piano", "jazz piano", "vinyl noise", "soft drums", "electric bass", "pads", "synth"],
+        "default_instruments": ["piano", "soft drums"]
+    }
+    
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                logger.info(f"Successfully loaded settings from: {config_path}")
+                return {
+                    "instruments": list(data.get("instruments", default_data["instruments"])),
+                    "default_instruments": list(data.get("default_instruments", default_data["default_instruments"]))
+                }
+        except Exception as e:
+            logger.error(f"Error reading config.json: {e}")
+    else:
+        logger.warning(f"Config file not found at: {config_path}. Using defaults.")
+    
+    return default_data
+
+SETTINGS = load_app_settings()
 service = MusicGenerationService(output_dir="outputs")
 
-# Estilização CSS
-custom_css = """
-.terminal-box textarea { 
-    background-color: #0b0f14 !important; 
-    color: #00ff41 !important; 
-    font-family: 'Courier New', monospace !important; 
-    border: 1px solid #182848 !important;
-}
-.generate-btn { 
-    background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%) !important; 
-    border: none !important; 
-    color: white !important;
-    font-weight: bold !important;
-}
-.main-header { text-align: center; margin-bottom: 20px; }
-"""
-
+# --- UI DEFINITION ---
 def create_ui():
-    with gr.Blocks(title="Auralith Studio") as demo:
-        
-        gr.Markdown("# 🎧 Auralith AI Music Generator", elem_classes=["main-header"])
+    """Builds the Gradio Blocks UI for Auralith Studio."""
+    with gr.Blocks(theme=auralith_theme, title="Auralith Studio", css=custom_css) as demo:
+        # --- Header ---
+        with gr.Row(elem_classes=["header"]):
+            gr.Markdown("## 🎹 Auralith Studio", elem_id="logo")
+            with gr.Column(scale=3):
+                progress_bar = gr.Slider(label="Rendering Progress", value=0, interactive=False, elem_classes=["glowing-progress"])
         
         with gr.Row():
-            # --- PAINEL DE CONTROLE (ESQUERDA) ---
-            with gr.Column(scale=2):
-                with gr.Group():
-                    gr.Markdown("### 🎹 Definições da Track")
-                    name_input = gr.Textbox(label="Nome do Projeto", placeholder="Ex: Chill_Rain_Session")
-                    prompt_input = gr.Textbox(
-                        label="Tema Musical (Prompt)", 
-                        placeholder="Ex: lofi, piano, rainy city, nostalgic",
-                        lines=3
-                    )
-                    
-                    with gr.Row():
-                        duration_input = gr.Dropdown(
-                            label="Duração", 
-                            choices=[30, 60, 90, 180, 300], 
-                            value=60
-                        )
-                        vibe_input = gr.Dropdown(
-                            label="Vibe", 
-                            choices=["calm", "sad", "nostalgic", "warm", "dreamy", "chill"], 
-                            value="calm"
-                        )
+            # --- Sidebar ---
+            with gr.Column(scale=1, min_width=100):
+                gr.Markdown("### 🛠️ Tools")
+                gr.Button("Studio", variant="primary")
+                gr.Button("About")
+                gr.Button("Help")
 
-                with gr.Group():
-                    gr.Markdown("### 🎚️ Ajustes de Estúdio")
-                    with gr.Row():
-                        bpm_min = gr.Slider(label="BPM Min", minimum=30, maximum=120, value=40, step=1)
-                        bpm_max = gr.Slider(label="BPM Max", minimum=30, maximum=140, value=60, step=1)
-                    
-                    instruments_input = gr.CheckboxGroup(
-                        label="Instrumentos",
-                        choices=["piano", "jazz piano", "vinyl noise", "soft drums", "electric bass", "pads", "synth"],
-                        value=["piano", "soft drums"]
-                    )
-                    no_abrupt = gr.Checkbox(label="Evitar mudanças bruscas (Smooth Transitions)", value=True)
+            # --- Main Workspace ---
+            with gr.Column(scale=5):
+                with gr.Tabs() as tabs:
+                    # --- Tab 1: Track Definitions ---
+                    with gr.TabItem("🎵 Track Definitions", id=0):
+                        with gr.Group():
+                            name_input = gr.Textbox(label="Project Name", placeholder="e.g., Lofi_Night_Drive")
+                            prompt_input = gr.Textbox(label="Style Prompt", placeholder="e.g., lofi, chill, synthwave, 80s", lines=3)
+                        with gr.Row():
+                            genre_input = gr.Dropdown(label="Genre", choices=["Lofi", "Jazz", "Synthwave", "Ambient", "Classical"], value="Lofi")
+                            mood_input = gr.Dropdown(label="Mood", choices=["Calm", "Sad", "Nostalgic", "Warm", "Dreamy", "Chill"], value="Calm")
+                        with gr.Row():
+                            duration_input = gr.Dropdown(label="Duration (s)", choices=[30, 60, 90, 180, 300], value=60)
+                            key_input = gr.Dropdown(label="Key", choices=["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"], value="C")
 
-                with gr.Row():
-                    clear_btn = gr.Button("🗑️ Limpar")
-                    # Botão que será travado
-                    generate_btn = gr.Button("🎵 GERAR MÚSICA", variant="primary", elem_classes=["generate-btn"])
+                    # --- Tab 2: Studio Adjustments ---
+                    with gr.TabItem("🎚️ Studio Adjustments", id=1):
+                        with gr.Group():
+                            gr.Markdown("#### Tempo & Instruments")
+                            with gr.Row():
+                                bpm_min = gr.Slider(label="BPM Min", minimum=30, maximum=120, value=40, step=1)
+                                bpm_max = gr.Slider(label="BPM Max", minimum=30, maximum=140, value=60, step=1)
+                            instruments_input = gr.CheckboxGroup(label="Instruments", choices=SETTINGS["instruments"], value=SETTINGS["default_instruments"])
+                            no_abrupt = gr.Checkbox(label="Smooth Transitions", value=True)
+                        with gr.Group():
+                            gr.Markdown("#### Effects (Placeholders)")
+                            reverb_slider = gr.Slider(label="Reverb", minimum=0, maximum=1, value=0.2, interactive=True)
+                            delay_slider = gr.Slider(label="Delay", minimum=0, maximum=1, value=0.1, interactive=True)
+                            compression_slider = gr.Slider(label="Compression", minimum=0, maximum=1, value=0.5, interactive=True)
 
-            # --- PAINEL DE MONITORAMENTO (DIREITA) ---
-            with gr.Column(scale=3):
-                gr.Markdown("### 🖥️ Studio Console")
-                status_output = gr.Textbox(
-                    label="Status do Motor de IA",
-                    lines=12,
-                    interactive=False,
-                    elem_classes=["terminal-box"]
-                )
-                
-                with gr.Group():
-                    gr.Markdown("### 📦 Master Output")
-                    file_output = gr.File(label="Ficheiro WAV", visible=False)
-                    audio_preview = gr.Audio(label="Preview", visible=False)
+                    # --- Tab 3: Studio Console & Output ---
+                    with gr.TabItem("🖥️ Studio Console", id=2):
+                        status_output = gr.Textbox(label="AI Engine Status", lines=15, interactive=False, elem_classes=["terminal-box"])
+                        with gr.Row():
+                            file_output = gr.File(label="Download WAV", visible=False)
+                            audio_preview = gr.Audio(label="Master Preview", type="filepath", visible=False)
 
-        # --- LÓGICA DE EXECUÇÃO ---
-        def run_generation(name, duration, prompt, b_min, b_max, vibe, inst, abrupt):
+        # --- Footer / Main Actions ---
+        with gr.Row():
+            clear_btn = gr.Button("🗑️ Clear Inputs")
+            generate_btn = gr.Button("🚀 GENERATE", variant="primary")
+
+        # --- Event Handling & Logic ---
+        def run_generation(name, duration, prompt, bpm_min, bpm_max, mood, instruments, abrupt):
+            """Handles the music generation process and UI updates."""
             if not prompt.strip():
-                # Reativa o botão se houver erro de validação
-                yield "❌ Erro: Por favor, insira um tema musical.", gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True)
+                gr.Warning("Prompt is required.")
+                yield {
+                    tabs: gr.update(selected=2),
+                    status_output: "Error: Prompt is required.",
+                    generate_btn: gr.update(interactive=True),
+                    clear_btn: gr.update(interactive=True),
+                }
                 return
 
-            log_history = []
-            
-            def update_logs(msg):
-                timestamp = datetime.now().strftime("%H:%M:%S")
-                log_history.append(f"[{timestamp}] {msg}")
-                return "\n".join(log_history)
+            # Switch to console tab and lock UI
+            yield {
+                tabs: gr.update(selected=2),
+                status_output: "Initializing generation...",
+                generate_btn: gr.update(interactive=False, value="Generating..."),
+                clear_btn: gr.update(interactive=False),
+                progress_bar: gr.update(value=0, label="Rendering... 0%")
+            }
 
-            # 1. TRAVA O BOTÃO: Enviamos gr.update(interactive=False) no início
-            yield update_logs("Iniciando Pipeline..."), gr.update(visible=False), gr.update(visible=False), gr.update(interactive=False)
+            log_stream = LogStream()
+            log_history = []
             
             config = {
                 "name": name, "duration": duration, "prompt": prompt,
-                "bpm_min": b_min, "bpm_max": b_max, "vibe": vibe,
-                "instruments": inst,
+                "bpm_min": bpm_min, "bpm_max": bpm_max, "vibe": mood,
+                "instruments": instruments,
                 "constraints": ["no abrupt changes", "smooth transitions"] if abrupt else ["smooth transitions"]
             }
 
-            # Callback para logs em tempo real
-            def progress_hook(m):
-                log_history.append(f"[{datetime.now().strftime('%H:%M:%S')}] {m}")
+            generation_task_result = {"result": None}
+            def generation_task():
+                try:
+                    result = service.generate_music(config=config, log_stream=log_stream)
+                    generation_task_result["result"] = result
+                finally:
+                    log_stream.end()
 
-            result = service.generate_music(config=config, progress_callback=progress_hook)
+            thread = threading.Thread(target=generation_task)
+            thread.start()
 
-            if result["success"]:
-                # 2. LIBERA O BOTÃO: Enviamos gr.update(interactive=True) no final
-                yield (
-                    "\n".join(log_history), 
-                    gr.update(value=result["file_path"], visible=True), 
-                    gr.update(value=result["file_path"], visible=True),
-                    gr.update(interactive=True)
-                )
+            # Stream logs and update progress
+            total_steps = 25
+            for i, log_message in enumerate(log_stream.stream_generator()):
+                log_history.append(log_message)
+                progress_val = min(0.95, (i + 1) / total_steps)
+                progress_label = f"Rendering... {int(progress_val * 100)}%"
+                yield {
+                    status_output: "\n".join(log_history),
+                    progress_bar: gr.update(value=progress_val, label=progress_label)
+                }
+                time.sleep(0.1)
+
+            thread.join()
+            result = generation_task_result["result"]
+
+            # Final UI update
+            if result and result["success"]:
+                log_history.append(f"✅ Generation successful! Output: {result['file_path']}")
+                yield {
+                    tabs: gr.update(selected=2),
+                    status_output: "\n".join(log_history),
+                    file_output: gr.update(value=result["file_path"], visible=True),
+                    audio_preview: gr.update(value=result["file_path"], visible=True),
+                    generate_btn: gr.update(interactive=True, value="🚀 GENERATE"),
+                    clear_btn: gr.update(interactive=True),
+                    progress_bar: gr.update(value=1, label="Rendering Complete")
+                }
             else:
-                yield (
-                    update_logs(f"ERRO: {result['error']}"), 
-                    gr.update(visible=False), 
-                    gr.update(visible=False),
-                    gr.update(interactive=True)
-                )
+                error_msg = result.get('error', "An unknown error occurred.") if result else "An unknown error occurred."
+                log_history.append(f"❌ ERROR: {error_msg}")
+                gr.Error(f"Generation Failed: {error_msg}")
+                yield {
+                    tabs: gr.update(selected=2),
+                    status_output: "\n".join(log_history),
+                    generate_btn: gr.update(interactive=True, value="🚀 GENERATE"),
+                    clear_btn: gr.update(interactive=True),
+                    progress_bar: gr.update(value=0, label="Rendering Failed")
+                }
 
-        # Configuração do clique com trava
         generate_btn.click(
             fn=run_generation,
-            inputs=[name_input, duration_input, prompt_input, bpm_min, bpm_max, vibe_input, instruments_input, no_abrupt],
-            # Note que adicionamos generate_btn na saída (outputs) para poder controlar sua interatividade
-            outputs=[status_output, file_output, audio_preview, generate_btn]
+            inputs=[name_input, duration_input, prompt_input, bpm_min, bpm_max, mood_input, instruments_input, no_abrupt],
+            outputs=[tabs, status_output, generate_btn, clear_btn, progress_bar, file_output, audio_preview]
         )
 
         def clear_form():
-            return "", 60, "", 40, 60, "calm", ["piano", "soft drums"], True, "", gr.update(visible=False), gr.update(visible=False), gr.update(interactive=True)
+            """Resets all input fields to their default state."""
+            return {
+                name_input: "",
+                prompt_input: "",
+                duration_input: 60,
+                mood_input: "Calm",
+                bpm_min: 40,
+                bpm_max: 60,
+                instruments_input: SETTINGS["default_instruments"],
+                no_abrupt: True,
+                status_output: "",
+                file_output: gr.update(visible=False),
+                audio_preview: gr.update(visible=False),
+                progress_bar: gr.update(value=0, label="Rendering Progress"),
+                reverb_slider: 0.2,
+                delay_slider: 0.1,
+                compression_slider: 0.5
+            }
 
-        clear_btn.click(
-            fn=clear_form,
-            outputs=[name_input, duration_input, prompt_input, bpm_min, bpm_max, vibe_input, instruments_input, no_abrupt, status_output, file_output, audio_preview, generate_btn]
-        )
+        clear_btn.click(fn=clear_form, outputs=[
+            name_input, prompt_input, duration_input, mood_input, bpm_min, bpm_max,
+            instruments_input, no_abrupt, status_output, file_output, audio_preview, progress_bar,
+            reverb_slider, delay_slider, compression_slider
+        ])
 
     return demo
 
+# --- Main Execution ---
 interface = create_ui()
 
 if __name__ == "__main__":
-    interface.launch(
-        server_name="0.0.0.0", 
-        server_port=7860, 
-        show_error=True,
-        theme=gr.themes.Soft(primary_hue="blue"),
-        css=custom_css
-    )
+    interface.launch(server_name="0.0.0.0", server_port=7860, show_error=True)
