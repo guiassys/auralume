@@ -1,97 +1,127 @@
 import logging as log
 import torch
-import math
-import numpy as np
+from threading import Lock
+from typing import Tuple, Optional
+
 from transformers import MusicgenForConditionalGeneration, AutoProcessor
 
+
+class MusicGenConfig:
+    def __init__(
+        self,
+        model_size: str = "medium",
+        sample_rate: int = 32000,
+        max_new_tokens: int = 1500, # Corresponds to ~30s of audio
+        top_k: int = 250,
+        top_p: float = 0.95,
+        temperature: float = 1.0,
+    ):
+        self.model_size = model_size
+        self.sample_rate = sample_rate
+        self.max_new_tokens = max_new_tokens
+        self.top_k = top_k
+        self.top_p = top_p
+        self.temperature = temperature
+
+    @property
+    def model_name(self) -> str:
+        return f"facebook/musicgen-{self.model_size}"
+
+
 class MusicGenEngine:
-    def __init__(self, model_size="medium"):
-        self.model_name = f"facebook/musicgen-{model_size}"
+    _instance = None
+    _lock = Lock()
 
-        log.info(f'[MusicGenEngine] Loading model: {self.model_name}')
+    def __new__(cls, config: MusicGenConfig = None):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+        return cls._instance
 
-        if torch.cuda.is_available():
-            self.device = torch.device('cuda')
-            log.info(f"Using GPU: {torch.cuda.get_device_name(0)}")
-        else:
-            self.device = torch.device('cpu')
-            log.error("CUDA NÃO está funcionando. Usando CPU.")
+    def __init__(self, config: MusicGenConfig = None):
+        if hasattr(self, "_initialized"):
+            return
 
-        self.processor = AutoProcessor.from_pretrained(self.model_name)
+        self.config = config or MusicGenConfig()
+        self.device = self._resolve_device()
+        self.dtype = torch.float16 if self.device.type == "cuda" else torch.float32
+
+        log.info(f"[MusicGenEngine] Loading model: {self.config.model_name}")
+        self.processor = AutoProcessor.from_pretrained(self.config.model_name)
         self.model = MusicgenForConditionalGeneration.from_pretrained(
-            self.model_name,
-            torch_dtype=torch.float16 if self.device.type == "cuda" else torch.float32
-        )
-
-        self.model = self.model.to(self.device)
-        self.model.eval()
-
-    def _crossfade(self, a, b, overlap):
-        """Faz transição suave entre dois áudios"""
-        fade_out = torch.linspace(1, 0, overlap)
-        fade_in = torch.linspace(0, 1, overlap)
-        # Garante que os fades estejam no mesmo dispositivo que os chunks
-        return (a[-overlap:] * fade_out + b[:overlap] * fade_in)
-
-    def generate(self, prompt, duration):
-        print(f"\n[LOFI GEN] Prompt: {prompt}")
-
-        # 🔧 CONFIGURAÇÃO SEGURA
-        sample_rate = 32000
-        chunk_duration = 30  # LIMITE DO MODELO (1500 tokens)
-        overlap_sec = 5
-        overlap = int(sample_rate * overlap_sec)
-
-        # Cálculo de chunks considerando que cada novo chunk sobrepõe o anterior
-        effective_chunk_time = chunk_duration - overlap_sec
-        num_chunks = math.ceil(duration / effective_chunk_time)
-        
-        total_audio = []
-
-        inputs = self.processor(
-            text=[prompt],
-            padding=True,
-            return_tensors="pt"
+            self.config.model_name,
+            torch_dtype=self.dtype
         ).to(self.device)
+        self.model.eval()
+        self._initialized = True
+
+    def _resolve_device(self) -> torch.device:
+        if torch.cuda.is_available():
+            device = torch.device("cuda")
+            log.info(f"Using GPU: {torch.cuda.get_device_name(0)}")
+            return device
+        log.warning("CUDA not available. Using CPU.")
+        return torch.device("cpu")
+
+    def generate(
+        self,
+        prompt: str,
+        duration: int,
+        prompt_audio: Optional[torch.Tensor] = None,
+        prompt_sr: Optional[int] = None
+    ) -> Tuple[torch.Tensor, int]:
+
+        if prompt_audio is not None:
+            inputs = self._prepare_inputs_with_audio(prompt, prompt_audio, prompt_sr)
+        else:
+            inputs = self._prepare_inputs(prompt)
+
+        # Adjust max_new_tokens based on duration
+        # MusicGen's tokenizer has a rate of 50 tokens/sec
+        max_new_tokens = int(duration * 50)
 
         with torch.no_grad():
-            for i in range(num_chunks):
-                print(f"[LOFI GEN] Chunk {i+1}/{num_chunks}")
+            audio_tensor = self.model.generate(
+                **inputs,
+                max_new_tokens=max_new_tokens,
+                do_sample=True,
+                top_k=self.config.top_k,
+                top_p=self.config.top_p,
+                temperature=self.config.temperature,
+            )
 
-                # 1500 tokens é o limite para MusicGen
-                max_tokens = 1500 
+        # The output is on the same device as the model, which is what we want
+        return audio_tensor, self.config.sample_rate
 
-                chunk = self.model.generate(
-                    **inputs,
-                    max_new_tokens=max_tokens,
-                    do_sample=True,
-                    top_k=250,
-                    top_p=0.95,
-                    temperature=1.0
-                )
+    def _prepare_inputs(self, prompt: str):
+        return self.processor(
+            text=[prompt],
+            return_tensors="pt",
+            padding=True
+        ).to(self.device)
 
-                # Limpeza de dimensões: de [1, 1, samples] para [samples]
-                chunk = chunk.detach().cpu().squeeze()
+    def _prepare_inputs_with_audio(self, prompt: str, prompt_audio: torch.Tensor, prompt_sr: int):
+        # 1. Ensure prompt audio is on CPU for the processor
+        prompt_audio_cpu = prompt_audio.to("cpu")
 
-                if i == 0:
-                    total_audio.append(chunk)
-                else:
-                    prev = total_audio[-1]
-                    
-                    if len(prev) > overlap and len(chunk) > overlap:
-                        mixed = self._crossfade(prev, chunk, overlap)
-                        merged = torch.cat([
-                            prev[:-overlap],
-                            mixed,
-                            chunk[overlap:]
-                        ])
-                        total_audio[-1] = merged
-                    else:
-                        total_audio.append(chunk)
+        # 2. Squeeze to 1D tensor if needed
+        if prompt_audio_cpu.ndim > 1:
+            prompt_audio_cpu = prompt_audio_cpu.squeeze(0)
 
-        # Concatena e corta para a duração exata pedida
-        audio = torch.cat(total_audio, dim=0)
-        target_length = int(duration * sample_rate)
-        audio = audio[:target_length]
+        inputs = self.processor(
+            audio=prompt_audio_cpu,
+            sampling_rate=prompt_sr,
+            text=[prompt],
+            return_tensors="pt",
+            padding=True
+        )
 
-        return audio, sample_rate
+        # 3. Correct dtype mismatch for ALL relevant tensors
+        if self.dtype == torch.float16:
+            if 'input_features' in inputs: # Text prompt features
+                inputs['input_features'] = inputs['input_features'].to(self.dtype)
+            if 'input_values' in inputs: # Audio prompt features
+                inputs['input_values'] = inputs['input_values'].to(self.dtype)
+
+        # 4. Move all tensors to the target device (GPU)
+        return inputs.to(self.device)
