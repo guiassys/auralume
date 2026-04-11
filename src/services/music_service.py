@@ -6,7 +6,7 @@ import threading
 import time
 from typing import Optional, Dict, Any
 
-from src.scripts.generator import LofiGenerator
+from src.scripts.generator import TrackGenerator
 from src.web.log_stream import LogStream
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ class MusicGenerationService:
     def __init__(self, output_dir: str = "outputs"):
         self.output_dir = output_dir
         os.makedirs(self.output_dir, exist_ok=True)
-        self.generator = LofiGenerator(output_dir=self.output_dir)
+        self.generator = TrackGenerator(output_dir=self.output_dir)
         self._lock = threading.Lock()
 
     def generate_music(

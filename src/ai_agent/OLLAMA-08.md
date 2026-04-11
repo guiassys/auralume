@@ -81,6 +81,27 @@ Maintain musical memory across the entire generation process.
 
 ---
 
+## 🚨 Technical Pitfalls to Avoid (CRITICAL)
+
+Based on previous failures, you MUST pay close attention to the following details when implementing audio conditioning:
+
+### 1. Audio Tensor Shape for `prompt_audio`
+- The Hugging Face `processor` for MusicGen expects the `audio` prompt to be a **1D tensor** of shape `(samples,)`.
+- Our internal audio format is a 2D tensor of shape `(channels, samples)`.
+- **Action:** You MUST use `.squeeze(0)` to remove the channel dimension before passing the audio to the `processor`.
+
+### 2. Data Type Mismatch (`float32` vs. `float16`)
+- The MusicGen model runs in `float16` (Half precision) on the GPU for performance.
+- The `processor`, by design, internally converts audio to `float32` (Full precision), creating a mismatch.
+- **Action:** After the `processor` returns its dictionary of inputs, you MUST access the `input_features` tensor and explicitly convert it back to the model's data type (`model.dtype` or `torch.float16`) before passing it to the `model.generate()` function.
+
+### 3. Device Mismatch (CPU vs. GPU)
+- The `processor` requires the input audio to be on the **CPU** to perform its internal NumPy conversions.
+- The `model` requires all inputs to be on the **GPU** (`cuda:0`).
+- **Action:** Ensure the audio prompt is on the CPU when passed to the `processor`. The final dictionary of inputs returned by the `processor` should then be moved to the GPU (`.to(device)`) before being passed to the model.
+
+---
+
 ## 🚀 Implementation Plan
 
 ### Step 1 — Root Cause Analysis (Mandatory First Step)

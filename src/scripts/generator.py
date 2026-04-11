@@ -1,131 +1,133 @@
 import logging
 import os
 from datetime import datetime
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional
 
 import numpy as np
 import soundfile as sf
+import torch
 
-from scripts.musicgen_pipeline import MusicPipeline
 from src.scripts.musicgen_engine import MusicGenEngine
 from src.web.log_stream import LogStream
 
 
-class AudioProcessor:
-    def merge_sections(self, sections: List[np.ndarray]) -> np.ndarray:
-        merged = sections[0]
-
-        for nxt in sections[1:]:
-            overlap = 20000
-
-            fade_out = np.linspace(1, 0, overlap)
-            fade_in = np.linspace(0, 1, overlap)
-
-            cross = merged[-overlap:] * fade_out + nxt[:overlap] * fade_in
-
-            merged = np.concatenate([
-                merged[:-overlap],
-                cross,
-                nxt[overlap:]
-            ])
-
-        return merged
-
-    def normalize(self, audio: np.ndarray) -> np.ndarray:
-        peak = np.max(np.abs(audio))
-        return audio / peak if peak > 0 else audio
-
-
-class AudioSaver:
-    def __init__(self, output_dir: str):
-        self.output_dir = output_dir
-
-    def save(self, audio: np.ndarray, sr: int, name: Optional[str]) -> str:
-        os.makedirs(self.output_dir, exist_ok=True)
-
-        filename = name or datetime.now().strftime("%Y%m%d_%H%M%S")
-        path = os.path.join(self.output_dir, f"{filename}.wav")
-
-        sf.write(path, audio, sr)
-
-        return path
-
-
-class LofiGenerator:
+class TrackGenerator:
     def __init__(
         self,
         output_dir: str = "outputs",
         engine: Optional[MusicGenEngine] = None,
-        pipeline: Optional[MusicPipeline] = None,
-        processor: Optional[AudioProcessor] = None,
-        saver: Optional[AudioSaver] = None,
     ):
-        if saver and output_dir:
-            pass
-
+        self.output_dir = output_dir
         self.engine = engine or MusicGenEngine()
-        self.pipeline = pipeline or MusicPipeline()
-        self.processor = processor or AudioProcessor()
-        self.saver = saver or AudioSaver(output_dir=output_dir)
-
         self.logger = logging.getLogger(__name__)
+        os.makedirs(self.output_dir, exist_ok=True)
 
     def generate(self, config: Dict[str, Any], log_stream: Optional[LogStream] = None) -> str:
         prompt = config.get("prompt", "lofi music")
         duration = int(config.get("duration", 180))
         name = config.get("name")
-        style = config.get("style", "lofi chill")
 
         def _log(message: str):
             self.logger.info(f"[GENERATOR] {message}")
             if log_stream:
                 log_stream.log(message)
 
-        _log("Running music generation pipeline...")
+        _log("Starting new generation pipeline...")
 
-        plan = self.pipeline.build(prompt, duration, style)
-        _log(f"Pipeline built. Plan includes {len(plan['sections'])} sections.")
+        # 1. Prompt Enrichment
+        enriched_prompt = self._enrich_prompt(prompt)
+        _log(f"Enriched prompt: '{enriched_prompt}'")
 
-        sections_audio, sample_rate = self._generate_sections(plan, log_stream)
-        _log("All audio sections generated successfully.")
+        # 2. Generation Plan
+        chunk_duration = 10  # seconds
+        overlap_duration = 2  # seconds
+        num_chunks = (duration - chunk_duration) // (chunk_duration - overlap_duration) + 1
 
-        _log("Merging sections with crossfade...")
-        final_audio = self.processor.merge_sections(sections_audio)
-        _log("Audio sections merged.")
+        # 3. Intro Generation
+        _log("Generating intro chunk (1/)...")
+        intro_audio, sr = self.engine.generate(enriched_prompt, chunk_duration)
+        full_audio = intro_audio.squeeze(0)  # Squeeze to (channels, samples)
+        _log("Intro chunk generated.")
 
-        _log("Normalizing final audio...")
-        final_audio = self.processor.normalize(final_audio)
-        _log("Audio normalized.")
+        # 4. Continuation Loop
+        for i in range(1, num_chunks):
+            _log(f"Generating continuation chunk ({i + 1}/{num_chunks})...")
+            prompt_audio = full_audio[:, -int(overlap_duration * sr):]
 
+            continuation_audio, _ = self._generate_continuation(
+                enriched_prompt,
+                prompt_audio,
+                chunk_duration,
+                sr
+            )
+            # Squeeze the continuation chunk as well
+            continuation_audio = continuation_audio.squeeze(0)
+
+            full_audio = self._crossfade_and_append(full_audio, continuation_audio, overlap_duration, sr)
+            _log(f"Continuation chunk {i + 1}/{num_chunks} added.")
+
+        # 5. Outro and Post-Processing
+        _log("Applying final fade-out...")
+        final_audio = self._apply_fade_out(full_audio, sr, duration=2)
+        _log("Post-processing complete.")
+
+        # 6. Save to file
         _log("Saving final audio file...")
-        path = self.saver.save(final_audio, sample_rate, name)
+        path = self._save_audio(final_audio, sr, name)
         _log(f"Audio saved successfully to: {os.path.basename(path)}")
 
         return path
 
-    def generate_section(self, prompt: str, duration: int):
-        return self.engine.generate_section(prompt, duration)
+    def _enrich_prompt(self, simple_prompt: str) -> str:
+        # Placeholder for a more sophisticated prompt engineering logic
+        return f"{simple_prompt}, lofi chill, calm, instrumental, 90 bpm, C minor"
 
-    def _generate_sections(self, plan: Dict[str, Any], log_stream: Optional[LogStream] = None) -> Tuple[List[np.ndarray], int]:
-        full_audio = []
-        sample_rate = None
-        total_sections = len(plan["sections"])
+    def _generate_continuation(self, prompt: str, prompt_audio: torch.Tensor, duration: int, sr: int) -> tuple[torch.Tensor, int]:
+        return self.engine.generate(
+            prompt=prompt,
+            duration=duration,
+            prompt_audio=prompt_audio,
+            prompt_sr=sr
+        )
 
-        def _log(message: str):
-            self.logger.info(f"[GENERATOR] {message}")
-            if log_stream:
-                log_stream.log(message)
+    def _crossfade_and_append(self, audio1: torch.Tensor, audio2: torch.Tensor, overlap_duration: int, sr: int) -> torch.Tensor:
+        overlap_samples = int(overlap_duration * sr)
 
-        for i, section in enumerate(plan["sections"]):
-            _log(f"Generating chunk {i + 1}/{total_sections}: {section['name']} ({section['duration']}s)")
+        # Ensure fade tensors have same dtype and device as audio
+        fade_out = torch.linspace(1, 0, overlap_samples, device=audio1.device, dtype=audio1.dtype).unsqueeze(0)
+        fade_in = torch.linspace(0, 1, overlap_samples, device=audio1.device, dtype=audio1.dtype).unsqueeze(0)
 
-            audio, sr = self.generate_section(
-                section["prompt"],
-                section["duration"]
-            )
+        # Apply crossfade
+        crossfaded_part = audio1[:, -overlap_samples:] * fade_out + audio2[:, :overlap_samples] * fade_in
 
-            sample_rate = sr
-            full_audio.append(audio.numpy())
-            _log(f"Chunk {i + 1}/{total_sections} finished.")
+        # Concatenate
+        return torch.cat([
+            audio1[:, :-overlap_samples],
+            crossfaded_part,
+            audio2[:, overlap_samples:]
+        ], dim=1)
 
-        return full_audio, sample_rate
+    def _apply_fade_out(self, audio: torch.Tensor, sr: int, duration: int) -> torch.Tensor:
+        fade_out_samples = int(duration * sr)
+        if fade_out_samples > audio.shape[1]:
+            fade_out_samples = audio.shape[1]
+
+        # Ensure fade tensor has same dtype and device as audio
+        fade_out = torch.linspace(1, 0, fade_out_samples, device=audio.device, dtype=audio.dtype).unsqueeze(0)
+        audio[:, -fade_out_samples:] *= fade_out
+        return audio
+
+    def _save_audio(self, audio: torch.Tensor, sr: int, name: Optional[str]) -> str:
+        filename = name or datetime.now().strftime("%Y%m%d_%H%M%S")
+        path = os.path.join(self.output_dir, f"{filename}.wav")
+
+        # Convert to numpy for soundfile, ensuring it's float32 for sf.write
+        audio_np = audio.to(torch.float32).cpu().numpy().T
+
+        # Normalize
+        peak = np.max(np.abs(audio_np))
+        if peak > 0:
+            audio_np /= peak
+
+        sf.write(path, audio_np, sr)
+        return path
