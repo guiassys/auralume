@@ -48,6 +48,13 @@
 
 ---
 
+## 9. Advanced Audio Conditioning and Cohesion
+- **What was done:** Replaced the simple chunking loop with a new `TrackGenerator` that uses audio conditioning. The end of the previous audio segment is now used as a prompt for the next, ensuring musical continuity.
+- **Critical Fixes:** Resolved low-level `dtype` and tensor shape mismatches between the CPU-based audio processor and the GPU-based `float16` model, which were causing `RuntimeError` crashes.
+- **Gain:** Generation of a single, cohesive, and musically structured track with seamless transitions, eliminating abrupt cuts and harmonic dissonance.
+
+---
+
 ## 🚀 Final Outcome
 - Faster generation
 - Stable execution
