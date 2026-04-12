@@ -25,11 +25,13 @@
         "clean guitar",
         "jazz guitar",
         "acoustic guitar",
+        "acoustic bass",
         "muted guitar",
         "ukulele",
         "bells",
         "chimes",
         "music box",
+        "box drum",
         "mallets",
         "vibraphone",
         "kalimba",
@@ -45,7 +47,8 @@
         "city ambience",
         "cassette noise",
         "vinyl crackle",
-        "fx textures"
+        "fx textures",
+        "class harmonica"
         ],
-    "default_instruments": ["piano", "soft drums"]
+    "default_instruments": ["box drum","acoustic bass","acoustic guitar", "lofi drums", "glass harmonica"]
 }
