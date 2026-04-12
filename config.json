@@ -48,7 +48,12 @@
         "cassette noise",
         "vinyl crackle",
         "fx textures",
-        "class harmonica"
+        "glass harmonica"
         ],
-    "default_instruments": ["box drum","acoustic bass","acoustic guitar", "lofi drums", "glass harmonica"]
+    "default_instruments": ["acoustic bass","acoustic guitar"],
+    "generator_settings": {
+        "chunk_duration": 10,
+        "overlap_duration": 2,
+        "fade-out_duration": 2
+    }
 }
