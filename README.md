@@ -20,11 +20,11 @@ Aelion funciona como uma âncora emocional do projeto, conectando o público à 
 
 Criar uma pipeline automatizada capaz de:
 
-1. Gerar músicas lo-fi com IA  
-2. Criar atmosferas sonoras coerentes  
-3. Integrar identidade visual e narrativa  
-4. Produzir conteúdos multimídia prontos para publicação  
-5. Expandir para vídeos e distribuição em plataformas digitais  
+1. Gerar músicas lo-fi com IA
+2. Criar atmosferas sonoras coerentes
+3. Exportar em múltiplos formatos, incluindo áudio (`.wav`, `.mp3`) e musical (`.mid`)
+4. Integrar identidade visual e narrativa
+5. Produzir conteúdos multimídia prontos para publicação
 
 ---
 
@@ -43,94 +43,96 @@ O Auralith foi projetado como um pipeline modular de geração de conteúdo mult
 - Permite geração aleatória ou guiada por temas
 
 ### 3. Camada de Orquestração
-- Classe `LofiGenerator`
-- Coordena geração, processamento e salvamento de áudio
+- `MusicGenerationService` e `TrackGenerator`
+- Coordena a geração, o pós-processamento e a exportação dos arquivos.
 
 ### 4. Camada de Saída
-- Exporta arquivos `.wav`
-- Futuro suporte para MP3, vídeo e streaming
+- Exporta arquivos de áudio nos formatos **`.wav`** e **`.mp3`**.
+- Exporta arquivos musicais no formato **`.mid`** para edição em DAWs (ex: LMMS).
 
 ## 🔄 Fluxo do sistema
 
-Prompt → Pipeline de prompt → MusicGenEngine → Processamento Tensor → Pós-processamento → Arquivo WAV
+Prompt → Pipeline de Geração → Pós-processamento → Arquivo de Áudio (`.wav` ou `.mp3`) + Arquivo MIDI (`.mid`)
 
 ---
 
 # ⚙️ Como executar o projeto
 
-## Instalação desenvolvedor wsl + Ubuntu
+## 1. Instalação do Ambiente Principal
+
+Este ambiente é responsável pela geração de áudio e pela interface web.
+
 ```bash
-cd ~/devtools/repos/auralith
+# Navegue até o diretório do projeto
+cd /path/to/auralith
+
+# Crie e ative o ambiente virtual principal
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-python run_web.py
-```
 
-
-## Instalação rápida
-```bash
-python -m venv venv
-source .venv/bin/activate
+# Instale as dependências
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Via Terminal (CLI)
+## 2. Instalação do Ambiente MIDI (Opcional)
+
+Este ambiente secundário é **necessário apenas se você deseja gerar arquivos `.mid`**. Ele resolve um conflito de dependências complexo de forma isolada.
+
 ```bash
-python -m src.scripts.generate_lofi_ai
+# Instale o Python 3.11 (se ainda não tiver)
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt-get update
+sudo apt-get install python3.11 python3.11-venv
+
+# Crie o ambiente virtual para o transcritor MIDI
+python3.11 -m venv .venv-midi
+
+# Ative e instale as dependências do transcritor
+source .venv-midi/bin/activate
+pip install basic-pitch "tensorflow-cpu<2.15"
+deactivate
 ```
 
-## Via Interface Web (Gradio)
+## 3. Executando a Aplicação
+
+Após a instalação, certifique-se de que o ambiente principal está ativo (`source .venv/bin/activate`) e inicie a interface web:
+
 ```bash
 python run_web.py
 ```
-Acesse: http://localhost:7860
+Acesse: **http://localhost:7860**
 
-**Interface Web:**
-- Preencha o nome da música (opcional)
-- Selecione a duração (30, 60, 90 ou 180 segundos)
-- Digite o estilo musical desejado
-- Clique em "Gerar Música"
-- Acompanhe o progresso pelas notificações
-- Baixe o arquivo gerado quando concluído
+### Usando a Interface Web:
+- Preencha os campos de `Project Name` e `Style Prompt`.
+- Na aba **"🎵 Track Definitions"**, você encontrará as novas opções:
+  - **Audio Format**: Selecione `.wav` ou `.mp3`. O padrão é `.wav`.
+  - **Generate MIDI File**: Marque esta caixa para gerar um arquivo `.mid` adicional.
+- Clique em **"🚀 GENERATE"**.
+- Acompanhe o progresso no console e baixe os arquivos gerados.
 
-**Nota:** Este script pode ser executado de qualquer diretório e detecta automaticamente a localização do projeto.
-
-## Resultado
-O áudio será gerado automaticamente no diretório onde o comando for executado (CLI) ou em `outputs/` (Web).
-
-## Exemplo programático
-Veja `example.py` para uso programático do serviço de geração.
-
-## Observações
-- O pipeline de geração agora está implementado em `src/scripts/music_pipeline.py`.
-- A classe `LofiGenerator` em `src/scripts/generator.py` usa o pipeline para criar um prompt final antes de acionar o modelo.
-- A interface Web reutiliza o pipeline existente sem alterações.
-- Um README adicional com detalhes do pipeline está disponível em `src/README.md`.
+---
 
 # 📁 Estrutura do Projeto
 
 ```
 auralith/
+├── .venv/                 # Ambiente virtual principal (Python 3.12)
+├── .venv-midi/            # Ambiente virtual para MIDI (Python 3.11)
 ├── src/
-│   ├── scripts/          # Pipeline de geração musical
-│   │   ├── generate_lofi_ai.py
+│   ├── scripts/           # Pipeline de geração e transcrição
 │   │   ├── generator.py
 │   │   ├── musicgen_engine.py
-│   │   ├── music_pipeline.py
-│   │   └── prompts.py
-│   ├── services/         # Camada de aplicação
+│   │   └── transcribe.py  # <-- Novo script de transcrição
+│   ├── services/          # Camada de aplicação
 │   │   └── music_service.py
-│   ├── web/              # Interface Web
-│   │   ├── app.py
-│   │   └── run_web.py
-│   └── ai_agent/         # Prompts e documentação
-├── outputs/              # Arquivos gerados
-├── run_web.py            # Script de execução da interface Web
-├── example.py            # Exemplo programático
-├── requirements.txt      # Dependências
-├── musicgen310/          # Ambiente virtual
+│   ├── web/               # Interface Web
+│   │   └── app.py
+│   └── ai_agent/          # Prompts e documentação
+├── outputs/               # Arquivos gerados
+├── docs/                  # Documentação de arquitetura e fixes
+├── run_web.py             # Script de execução da interface Web
+├── requirements.txt       # Dependências do ambiente principal
 └── README.md
 ```
 
@@ -138,22 +140,9 @@ auralith/
 
 # 📦 Requisitos
 
-- Python 3.10+
-- PyTorch
-- Transformers (Hugging Face)
-- SoundFile
-- NumPy
-- LangChain
-- Gradio (para interface Web)
-
----
-
-# 💰 Monetização (visão futura)
-
-- Monetização via YouTube (lo-fi livestreams)
-- Distribuição em plataformas de streaming
-- Parcerias com marcas de bem-estar e produtividade
-- Venda de conteúdos digitais e assets exclusivos
+- **Ambiente Principal**: Python 3.12+
+- **Ambiente MIDI**: Python 3.11
+- PyTorch, Transformers, Diffusers, Pydub, Gradio
 
 ---
 
@@ -161,9 +150,8 @@ auralith/
 
 ✔ Geração de música lo-fi funcional  
 ✔ Pipeline modular com LangChain  
-✔ Interface Web com Gradio (funcionando)  
-✔ Salvamento correto em diretórios  
-✔ Execução via CLI e Web  
+✔ Interface Web com Gradio  
+✔ **Exportação para .wav, .mp3 e .mid implementada**  
 🚧 Geração de vídeo (em desenvolvimento)  
 🚧 Integração com personagem Aelion  
 🚧 Rádio lo-fi contínua (em planejamento)  
@@ -173,8 +161,6 @@ auralith/
 # 🌌 Visão
 
 Auralith é projetado como um sistema escalável de criação de universos criativos, onde música, narrativa e identidade visual coexistem.
-
-Personagens como Aelion são apenas o início de múltiplas possibilidades de mundos gerados por IA.
 
 ---
 

@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from datetime import datetime
@@ -16,11 +17,16 @@ class TrackGenerator:
         self,
         output_dir: str = "outputs",
         engine: Optional[MusicGenEngine] = None,
+        config_path: str = "config.json",
     ):
         self.output_dir = output_dir
         self.engine = engine or MusicGenEngine()
         self.logger = logging.getLogger(__name__)
         os.makedirs(self.output_dir, exist_ok=True)
+
+        with open(config_path, 'r') as f:
+            self.config = json.load(f)
+        self.generator_settings = self.config.get("generator_settings", {})
 
     def generate(self, config: Dict[str, Any], log_stream: Optional[LogStream] = None) -> str:
         prompt = config.get("prompt", "lofi music")
@@ -39,12 +45,12 @@ class TrackGenerator:
         _log(f"Enriched prompt: '{enriched_prompt}'")
 
         # 2. Generation Plan
-        chunk_duration = 10  # seconds
-        overlap_duration = 2  # seconds
+        chunk_duration = self.generator_settings.get("chunk_duration", 10)
+        overlap_duration = self.generator_settings.get("overlap_duration", 2)
         num_chunks = (duration - chunk_duration) // (chunk_duration - overlap_duration) + 1
 
         # 3. Intro Generation
-        _log("Generating intro chunk (1/)...")
+        _log(f"Generating intro chunk (1/{num_chunks})...")
         intro_audio, sr = self.engine.generate(enriched_prompt, chunk_duration)
         full_audio = intro_audio.squeeze(0)  # Squeeze to (channels, samples)
         _log("Intro chunk generated.")
@@ -68,7 +74,7 @@ class TrackGenerator:
 
         # 5. Outro and Post-Processing
         _log("Applying final fade-out...")
-        final_audio = self._apply_fade_out(full_audio, sr, duration=2)
+        final_audio = self._apply_fade_out(full_audio, sr, duration=self.generator_settings.get("fade-out_duration", 2))
         _log("Post-processing complete.")
 
         # 6. Save to file
@@ -80,7 +86,7 @@ class TrackGenerator:
 
     def _enrich_prompt(self, simple_prompt: str) -> str:
         # Placeholder for a more sophisticated prompt engineering logic
-        return f"{simple_prompt}, lofi chill, calm, instrumental, 90 bpm, C minor"
+        return f"{simple_prompt}"
 
     def _generate_continuation(self, prompt: str, prompt_audio: torch.Tensor, duration: int, sr: int) -> tuple[torch.Tensor, int]:
         return self.engine.generate(

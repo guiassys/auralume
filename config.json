@@ -25,11 +25,13 @@
         "clean guitar",
         "jazz guitar",
         "acoustic guitar",
+        "acoustic bass",
         "muted guitar",
         "ukulele",
         "bells",
         "chimes",
         "music box",
+        "box drum",
         "mallets",
         "vibraphone",
         "kalimba",
@@ -45,7 +47,13 @@
         "city ambience",
         "cassette noise",
         "vinyl crackle",
-        "fx textures"
+        "fx textures",
+        "glass harmonica"
         ],
-    "default_instruments": ["piano", "soft drums"]
+    "default_instruments": ["acoustic bass","acoustic guitar"],
+    "generator_settings": {
+        "chunk_duration": 10,
+        "overlap_duration": 2,
+        "fade-out_duration": 2
+    }
 }
