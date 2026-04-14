@@ -3,6 +3,12 @@ torch>=2.0.0
 numpy>=1.21.0
 transformers>=4.21.0
 soundfile>=0.10.0
+diffusers>=0.27.2
+accelerate>=0.29.3
+Pillow>=10.3.0
+opencv-python>=4.9.0
+pydub>=0.25.1
+mido>=1.2.10
 
 # Pipeline
 langchain>=1.2.0

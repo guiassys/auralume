@@ -79,6 +79,9 @@ def create_ui():
                         with gr.Row():
                             duration_input = gr.Dropdown(label="Duration (s)", choices=[30, 60, 90, 180, 300], value=60)
                             key_input = gr.Dropdown(label="Key", choices=["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"], value="C")
+                        with gr.Row():
+                            audio_format_input = gr.Radio(label="Audio Format", choices=[".wav", ".mp3"], value=".wav")
+                            generate_midi_input = gr.Checkbox(label="Generate MIDI File", value=False)
 
                     # --- Tab 2: Studio Adjustments ---
                     with gr.TabItem("🎚️ Studio Adjustments", id=1):
@@ -99,7 +102,7 @@ def create_ui():
                     with gr.TabItem("🖥️ Studio Console", id=2):
                         status_output = gr.Textbox(label="AI Engine Status", lines=15, interactive=False, elem_classes=["terminal-box"])
                         with gr.Row():
-                            file_output = gr.File(label="Download WAV", visible=False)
+                            file_output = gr.File(label="Download Files", visible=False)
                             audio_preview = gr.Audio(label="Master Preview", type="filepath", visible=False)
 
         # --- Footer / Main Actions ---
@@ -108,7 +111,7 @@ def create_ui():
             generate_btn = gr.Button("🚀 GENERATE", variant="primary")
 
         # --- Event Handling & Logic ---
-        def run_generation(name, duration, prompt, bpm_min, bpm_max, mood, instruments, abrupt):
+        def run_generation(name, duration, prompt, bpm_min, bpm_max, mood, instruments, abrupt, audio_format, generate_midi):
             """Handles the music generation process and UI updates."""
             if not prompt.strip():
                 gr.Warning("Prompt is required.")
@@ -136,7 +139,9 @@ def create_ui():
                 "name": name, "duration": duration, "prompt": prompt,
                 "bpm_min": bpm_min, "bpm_max": bpm_max, "vibe": mood,
                 "instruments": instruments,
-                "constraints": ["no abrupt changes", "smooth transitions"] if abrupt else ["smooth transitions"]
+                "constraints": ["no abrupt changes", "smooth transitions"] if abrupt else ["smooth transitions"],
+                "audio_format": audio_format,
+                "generate_midi": generate_midi
             }
 
             generation_task_result = {"result": None}
@@ -167,12 +172,12 @@ def create_ui():
 
             # Final UI update
             if result and result["success"]:
-                log_history.append(f"✅ Generation successful! Output: {result['file_path']}")
+                log_history.append(f"✅ Generation successful! Output files: {result['files']}")
                 yield {
                     tabs: gr.update(selected=2),
                     status_output: "\n".join(log_history),
-                    file_output: gr.update(value=result["file_path"], visible=True),
-                    audio_preview: gr.update(value=result["file_path"], visible=True),
+                    file_output: gr.update(value=result["files"], visible=True),
+                    audio_preview: gr.update(value=result["files"][0], visible=True),
                     generate_btn: gr.update(interactive=True, value="🚀 GENERATE"),
                     clear_btn: gr.update(interactive=True),
                     progress_bar: gr.update(value=1, label="Rendering Complete")
@@ -191,7 +196,7 @@ def create_ui():
 
         generate_btn.click(
             fn=run_generation,
-            inputs=[name_input, duration_input, prompt_input, bpm_min, bpm_max, mood_input, instruments_input, no_abrupt],
+            inputs=[name_input, duration_input, prompt_input, bpm_min, bpm_max, mood_input, instruments_input, no_abrupt, audio_format_input, generate_midi_input],
             outputs=[tabs, status_output, generate_btn, clear_btn, progress_bar, file_output, audio_preview]
         )
 
@@ -206,6 +211,8 @@ def create_ui():
                 bpm_max: 60,
                 instruments_input: SETTINGS["default_instruments"],
                 no_abrupt: True,
+                audio_format_input: ".wav",
+                generate_midi_input: False,
                 status_output: "",
                 file_output: gr.update(visible=False),
                 audio_preview: gr.update(visible=False),
@@ -217,7 +224,7 @@ def create_ui():
 
         clear_btn.click(fn=clear_form, outputs=[
             name_input, prompt_input, duration_input, mood_input, bpm_min, bpm_max,
-            instruments_input, no_abrupt, status_output, file_output, audio_preview, progress_bar,
+            instruments_input, no_abrupt, audio_format_input, generate_midi_input, status_output, file_output, audio_preview, progress_bar,
             reverb_slider, delay_slider, compression_slider
         ])
 
