@@ -55,6 +55,13 @@
 
 ---
 
+## 10. MIDI and MP3 Export with Isolated Dependency Resolution
+- **What was done:** Implemented MP3 export using `pydub`. For MIDI generation, a separate Python 3.11 environment (`.venv-midi`) was created to host the `basic-pitch` library, resolving a critical dependency conflict with the main Python 3.12 environment. The main application now calls a dedicated transcription script (`transcribe.py`) as a subprocess.
+- **Critical Fixes:** Solved a chain of `ResolutionImpossible` and build-time errors by completely isolating the incompatible MIDI transcription dependencies, allowing the main application to remain on a modern Python version.
+- **Gain:** Added highly requested export formats (.mp3, .mid) for wider usability and DAW integration, while maintaining a stable and clean primary environment.
+
+---
+
 ## 🚀 Final Outcome
 - Faster generation
 - Stable execution
