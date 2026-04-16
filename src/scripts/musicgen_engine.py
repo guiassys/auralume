@@ -68,7 +68,11 @@ class MusicGenEngine:
         prompt: str,
         duration: int,
         prompt_audio: Optional[torch.Tensor] = None,
-        prompt_sr: Optional[int] = None
+        prompt_sr: Optional[int] = None,
+        temperature: Optional[float] = None,
+        top_k: Optional[int] = None,
+        top_p: Optional[float] = None,
+        max_new_tokens_override: Optional[int] = None,
     ) -> Tuple[torch.Tensor, int]:
 
         if prompt_audio is not None:
@@ -76,18 +80,22 @@ class MusicGenEngine:
         else:
             inputs = self._prepare_inputs(prompt)
 
-        # Adjust max_new_tokens based on duration
-        # MusicGen's tokenizer has a rate of 50 tokens/sec
-        max_new_tokens = int(duration * 50)
+        # Use override if provided, else use from config
+        gen_temperature = temperature if temperature is not None else self.config.temperature
+        gen_top_k = top_k if top_k is not None else self.config.top_k
+        gen_top_p = top_p if top_p is not None else self.config.top_p
+
+        # Adjust max_new_tokens based on duration, allow override
+        max_new_tokens = max_new_tokens_override if max_new_tokens_override is not None else int(duration * 50)
 
         with torch.no_grad():
             audio_tensor = self.model.generate(
                 **inputs,
                 max_new_tokens=max_new_tokens,
                 do_sample=True,
-                top_k=self.config.top_k,
-                top_p=self.config.top_p,
-                temperature=self.config.temperature,
+                top_k=gen_top_k,
+                top_p=gen_top_p,
+                temperature=gen_temperature,
             )
 
         # The output is on the same device as the model, which is what we want
