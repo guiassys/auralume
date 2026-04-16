@@ -80,4 +80,9 @@ custom_css = """
     background-color: #00ff41 !important; /* Neon Green */
     box-shadow: 0 0 5px #00ff41, 0 0 10px #00ff41;
 }
+
+/* Remove background from instrument checkboxes */
+.gradio-container .gr-checkboxgroup .gr-checkbox-label {
+    background-color: transparent !important;
+}
 """
