@@ -15,13 +15,10 @@ from src.web.log_stream import LogStream
 class TrackGenerator:
     def __init__(
         self,
-        output_dir: str = "outputs",
         engine: Optional[MusicGenEngine] = None,
         config_path: str = "config.json",
     ):
-        self.output_dir = output_dir
         self.logger = logging.getLogger(__name__)
-        os.makedirs(self.output_dir, exist_ok=True)
 
         with open(config_path, 'r') as f:
             self.config = json.load(f)
@@ -42,6 +39,7 @@ class TrackGenerator:
         key = config.get("key", self.generator_settings.get("key", "C minor"))
         temperature = config.get("temperature", self.generator_settings.get("temperature", 1.0))
         max_new_tokens = config.get("max_new_tokens", self.generator_settings.get("max_new_tokens", 1500))
+        output_dir = config.get("output_dir", self.generator_settings.get("output_dir", "outputs"))
 
         def _log(message: str):
             self.logger.info(f"[GENERATOR] {message}")
@@ -96,7 +94,8 @@ class TrackGenerator:
 
         # 6. Save to file
         _log("Saving final audio file...")
-        path = self._save_audio(final_audio, sr, name)
+        os.makedirs(output_dir, exist_ok=True)
+        path = self._save_audio(final_audio, sr, name, output_dir)
         _log(f"Audio saved successfully to: {os.path.basename(path)}")
 
         return path
@@ -147,9 +146,9 @@ class TrackGenerator:
         audio[:, -fade_out_samples:] *= fade_out
         return audio
 
-    def _save_audio(self, audio: torch.Tensor, sr: int, name: Optional[str]) -> str:
+    def _save_audio(self, audio: torch.Tensor, sr: int, name: Optional[str], output_dir: str) -> str:
         filename = name or datetime.now().strftime("%Y%m%d_%H%M%S")
-        path = os.path.join(self.output_dir, f"{filename}.wav")
+        path = os.path.join(output_dir, f"{filename}.wav")
 
         audio_np = audio.to(torch.float32).cpu().numpy().T
 
