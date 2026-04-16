@@ -130,11 +130,11 @@ def create_ui():
                         with gr.Row():
                             file_output = gr.File(label="Download Files", visible=False)
                             audio_preview = gr.Audio(label="Master Preview", type="filepath", visible=False)
-
-        # --- Footer / Main Actions ---
-        with gr.Row():
-            clear_btn = gr.Button("🗑️ Clear Inputs")
-            generate_btn = gr.Button("🚀 GENERATE", variant="primary")
+                
+                # --- Main Actions ---
+                with gr.Row():
+                    clear_btn = gr.Button("🗑️ Clear Inputs")
+                    generate_btn = gr.Button("🚀 GENERATE", variant="primary")
 
         # --- Event Handling & Logic ---
         def run_generation(
