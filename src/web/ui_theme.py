@@ -9,7 +9,7 @@ class AuralithTheme(Base):
     def __init__(self):
         super().__init__(
             primary_hue=colors.blue,
-            secondary_hue=colors.blue,
+            secondary_hue=colors.gray,
             neutral_hue=colors.gray,
             spacing_size=sizes.spacing_md,
             radius_size=sizes.radius_md,
@@ -37,10 +37,15 @@ class AuralithTheme(Base):
             color_accent_soft_dark="*primary_800",
 
             # Component-specific overrides
-            button_primary_background_fill="linear-gradient(90deg, #4b6cb7 0%, #182848 100%)",
-            button_primary_background_fill_dark="linear-gradient(90deg, #4b6cb7 0%, #182848 100%)",
+            button_primary_background_fill="*primary_600",
+            button_primary_background_fill_dark="*primary_600",
             button_primary_text_color="white",
             button_primary_text_color_dark="white",
+            
+            button_secondary_background_fill="*neutral_700",
+            button_secondary_background_fill_dark="*neutral_700",
+            button_secondary_text_color="white",
+            button_secondary_text_color_dark="white",
 
             slider_color="*primary_500",
             slider_color_dark="*primary_500",
@@ -79,5 +84,10 @@ custom_css = """
 .glowing-progress .track-fill {
     background-color: #00ff41 !important; /* Neon Green */
     box-shadow: 0 0 5px #00ff41, 0 0 10px #00ff41;
+}
+
+/* Remove background from instrument checkboxes */
+.gradio-container .gr-checkboxgroup .gr-checkbox-label {
+    background-color: transparent !important;
 }
 """
