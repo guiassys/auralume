@@ -20,10 +20,8 @@ class MusicGenerationService:
     Atua como um Orquestrador entre a Interface Web e o Engine de IA.
     """
 
-    def __init__(self, output_dir: str = "outputs"):
-        self.output_dir = output_dir
-        os.makedirs(self.output_dir, exist_ok=True)
-        self.generator = TrackGenerator(output_dir=self.output_dir)
+    def __init__(self):
+        self.generator = TrackGenerator()
         self._lock = threading.Lock()
         self.project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -150,10 +148,10 @@ class MusicGenerationService:
                     "error": error_msg
                 }
 
-    def list_generated_files(self) -> list:
+    def list_generated_files(self, output_dir: str) -> list:
         """Utilitário opcional para listar músicas já criadas na pasta de output."""
         try:
-            files = [f for f in os.listdir(self.output_dir) if f.endswith(('.wav', '.mp3', '.mid'))]
-            return sorted(files, key=lambda x: os.path.getmtime(os.path.join(self.output_dir, x)), reverse=True)
+            files = [f for f in os.listdir(output_dir) if f.endswith(('.wav', '.mp3', '.mid'))]
+            return sorted(files, key=lambda x: os.path.getmtime(os.path.join(output_dir, x)), reverse=True)
         except Exception:
             return []
