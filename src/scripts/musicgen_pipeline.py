@@ -1,3 +1,4 @@
+import json
 import logging
 import numpy as np
 from typing import Dict, Any, List, Optional
@@ -6,6 +7,10 @@ from langchain_core.runnables import RunnableLambda, RunnableSequence
 
 logger = logging.getLogger(__name__)
 
+
+def load_config():
+    with open("config.json", "r") as f:
+        return json.load(f)
 
 # -----------------------------
 # VECTOR STORE (DIP ready)
@@ -36,28 +41,32 @@ class SimpleVectorStore:
 # EMBEDDING PROVIDER (SRP)
 # -----------------------------
 class EmbeddingProvider:
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+
     def embed(self, text: str) -> np.ndarray:
-        return np.random.rand(128)
+        embedding_size = self.config["generator_settings"]["embedding_size"]
+        return np.random.rand(embedding_size)
 
 
 # -----------------------------
 # ARCHITECT (SRP)
 # -----------------------------
 class MusicArchitect:
+    def __init__(self, config: Dict[str, Any]):
+        self.config = config
+
     def build_structure(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         duration = inputs["duration"]
-
         logger.info("[ARCHITECT] Designing music structure")
 
-        structure = [
-            {"name": "intro", "ratio": 0.1, "desc": "minimal, buildup, soft textures"},
-            {"name": "verse", "ratio": 0.4, "desc": "groove, melodic progression"},
-            {"name": "chorus", "ratio": 0.35, "desc": "full energy, layered, emotional"},
-            {"name": "outro", "ratio": 0.15, "desc": "fading out, decay, resolution"},
-        ]
+        generator_settings = self.config["generator_settings"]
+        structure = generator_settings["structure"]
+        bpm_range = generator_settings["bpm_range"]
+        keys = generator_settings["keys"]
 
-        bpm = np.random.randint(70, 90)
-        key = np.random.choice(["C minor", "A minor", "D major"])
+        bpm = np.random.randint(bpm_range[0], bpm_range[1])
+        key = np.random.choice(keys)
 
         for s in structure:
             s["duration"] = int(duration * s["ratio"])
@@ -78,9 +87,11 @@ class MusicComposer:
         self,
         vector_store: Optional[SimpleVectorStore] = None,
         embedding_provider: Optional[EmbeddingProvider] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
+        self.config = config or load_config()
         self.vector_store = vector_store or SimpleVectorStore()
-        self.embedding_provider = embedding_provider or EmbeddingProvider()
+        self.embedding_provider = embedding_provider or EmbeddingProvider(self.config)
 
     def compose(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         logger.info("[COMPOSER] Generating structured prompts")
@@ -156,8 +167,9 @@ class MusicPipeline:
         architect: Optional[MusicArchitect] = None,
         composer: Optional[MusicComposer] = None,
     ):
-        self.architect = architect or MusicArchitect()
-        self.composer = composer or MusicComposer()
+        config = load_config()
+        self.architect = architect or MusicArchitect(config)
+        self.composer = composer or MusicComposer(config=config)
 
         self.pipeline = RunnableSequence(
             RunnableLambda(self._architect_stage),

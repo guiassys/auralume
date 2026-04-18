@@ -79,12 +79,4 @@ A geração musical usa um pipeline modular para transformar o prompt inicial em
 - A engine atual usa chunks de 30 segundos para gerar áudio de forma incremental.
 - A interface Web reutiliza o pipeline sem modificá-lo.
 
-## Exemplo de uso rápido
-
-```python
-from src.scripts.generator import LofiGenerator
-
-gen = LofiGenerator()
-path = gen.generate(prompt="hip hop chill, piano suave", duration=60, name="minha_musica")
-print(path)
 ```
