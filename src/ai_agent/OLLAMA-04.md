@@ -1,8 +1,8 @@
-# Prompt: Refatoração Auralith - Pipeline de Composição Musical Estruturada
+# Prompt: Refatoração Auralume - Pipeline de Composição Musical Estruturada
 
 Você é um Engenheiro de Software Sênior especialista em IA Generativa, Áudio Digital e LangChain. 
 
-Sua missão é refatorar o projeto **Auralith** (localizado em `src/scripts/`) para que ele deixe de gerar áudio linear e passe a produzir músicas com estrutura narrativa real (Intro, Verso, Refrão e Outro), utilizando técnicas inspiradas em RAG para manter a coerência temática.
+Sua missão é refatorar o projeto **Auralume** (localizado em `src/scripts/`) para que ele deixe de gerar áudio linear e passe a produzir músicas com estrutura narrativa real (Intro, Verso, Refrão e Outro), utilizando técnicas inspiradas em RAG para manter a coerência temática.
 
 ---
 

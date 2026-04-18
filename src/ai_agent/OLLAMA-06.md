@@ -1,8 +1,8 @@
-# 🚀 Prompt: Auralith Evolution — Dynamic Processing Log Streaming in UI
+# 🚀 Prompt: Auralume Evolution — Dynamic Processing Log Streaming in UI
 
 You are a **Senior Software Engineer** specialized in **Generative AI, Digital Audio, and LangChain**.
 
-Your mission is to evolve the **Auralith** system by implementing a **real-time dynamic processing log stream in the User Interface (UI)**, allowing users to observe execution logs as if they were viewing a live terminal.
+Your mission is to evolve the **Auralume** system by implementing a **real-time dynamic processing log stream in the User Interface (UI)**, allowing users to observe execution logs as if they were viewing a live terminal.
 
 All logs MUST be written in **English**.
 

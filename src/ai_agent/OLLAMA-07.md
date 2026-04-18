@@ -1,7 +1,7 @@
-# 🚀 Prompt: Auralith Evolution — Professional DAW Interface Implementation
+# 🚀 Prompt: Auralume Evolution — Professional DAW Interface Implementation
 
 **Role:** Senior Software Engineer (Generative AI, Digital Audio, & LangChain).
-**Context:** Evolving the **Auralith** system's UI from a basic Gradio layout to a professional Digital Audio Workstation (DAW) experience.
+**Context:** Evolving the **Auralume** system's UI from a basic Gradio layout to a professional Digital Audio Workstation (DAW) experience.
 **Language Requirement:** All logs and code documentation MUST be in **English**.
 
 ---
@@ -25,7 +25,7 @@ Redesign the Gradio interface to mimic a professional DAW (e.g., Ableton Live, F
 
 ### B. Layout Hierarchy
 1.  **Header (Global):**
-    * Left: Auralith Logo + System Status (CPU/Inference Engine).
+    * Left: Auralume Logo + System Status (CPU/Inference Engine).
     * Center: **Persistent Progress Bar** (Slim, glowing) showing "Rendering..." status and %.
 2.  **Sidebar (Left - Expansive):**
     * Icons: [Studio Tools (Active)], [About], [Help].

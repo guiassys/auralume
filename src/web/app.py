@@ -1,5 +1,5 @@
 """
-Professional Web Interface for Auralith using Gradio with a DAW-inspired,
+Professional Web Interface for Auralume using Gradio with a DAW-inspired,
 dark-themed layout and real-time log streaming.
 """
 import gradio as gr
@@ -10,7 +10,7 @@ import threading
 import time
 from src.services.music_service import MusicGenerationService
 from src.web.log_stream import LogStream
-from src.web.ui_theme import auralith_theme, custom_css
+from src.web.ui_theme import auralume_theme, custom_css
 
 # --- Logging Configuration ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -62,7 +62,7 @@ service = MusicGenerationService()
 # --- UI DEFINITION ---
 def create_ui():
     """Builds the Gradio Blocks UI for Auralume."""
-    with gr.Blocks(theme=auralith_theme, title="Auralume", css=custom_css) as demo:
+    with gr.Blocks(theme=auralume_theme, title="Auralume", css=custom_css) as demo:
         # --- Header ---
         with gr.Row(elem_classes=["header"]):
             gr.Markdown("## 🎹 Auralume", elem_id="logo")

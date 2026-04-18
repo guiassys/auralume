@@ -1,6 +1,6 @@
-# Auralith - Pipeline de Geração Musical
+# Auralume - Pipeline de Geração Musical
 
-Este README descreve o fluxo de geração de música no diretório `src` do projeto Auralith.
+Este README descreve o fluxo de geração de música no diretório `src` do projeto Auralume.
 
 ## O que há aqui
 
@@ -22,7 +22,7 @@ Este README descreve o fluxo de geração de música no diretório `src` do proj
 ### Via Terminal
 1. Ative o ambiente virtual do projeto:
 ```powershell
-cd c:\devtools\repo\auralith
+cd c:\devtools\repo\auralume
 .\musicgen310\Scripts\Activate.ps1
 ```
 
@@ -44,7 +44,7 @@ python src/web/run_web.py
 
 3. Acesse: http://localhost:7860
 
-**Importante:** Execute sempre a partir do diretório raiz do projeto (`auralith/`) para que os imports Python funcionem corretamente.
+**Importante:** Execute sempre a partir do diretório raiz do projeto (`auralume/`) para que os imports Python funcionem corretamente.
 
 ## Arquitetura do pipeline
 
