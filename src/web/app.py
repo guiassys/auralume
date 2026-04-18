@@ -61,21 +61,14 @@ service = MusicGenerationService()
 
 # --- UI DEFINITION ---
 def create_ui():
-    """Builds the Gradio Blocks UI for Auralith Studio."""
-    with gr.Blocks(theme=auralith_theme, title="Auralith Studio", css=custom_css) as demo:
+    """Builds the Gradio Blocks UI for Auralume."""
+    with gr.Blocks(theme=auralith_theme, title="Auralume", css=custom_css) as demo:
         # --- Header ---
         with gr.Row(elem_classes=["header"]):
-            gr.Markdown("## 🎹 Auralith Studio", elem_id="logo")
+            gr.Markdown("## 🎹 Auralume", elem_id="logo")
             progress_bar = gr.Slider(label="Rendering Progress", value=0, interactive=False, elem_classes=["glowing-progress"])
         
         with gr.Row():
-            # --- Sidebar ---
-            with gr.Column(scale=1, min_width=100):
-                gr.Markdown("### 🛠️ Tools")
-                gr.Button("Studio", variant="primary")
-                gr.Button("About")
-                gr.Button("Help")
-
             # --- Main Workspace ---
             with gr.Column(scale=5):
                 with gr.Tabs() as tabs:
@@ -124,8 +117,8 @@ def create_ui():
                                 fade_in_input = gr.Slider(label="Fade-In (s)", minimum=0, maximum=5, value=SETTINGS["generator_settings"]["fade_in_duration"], step=0.5)
                                 fade_out_input = gr.Slider(label="Fade-Out (s)", minimum=0, maximum=5, value=SETTINGS["generator_settings"]["fade_out_duration"], step=0.5)
 
-                    # --- Tab 3: Studio Console & Output ---
-                    with gr.TabItem("🖥️ Studio Console", id=2):
+                    # --- Tab 3: Console & Output ---
+                    with gr.TabItem("🖥️ Console", id=2):
                         status_output = gr.Textbox(label="AI Engine Status", lines=15, interactive=False, elem_classes=["terminal-box"])
                         with gr.Row():
                             file_output = gr.File(label="Download Files", visible=False)
@@ -135,6 +128,13 @@ def create_ui():
                 with gr.Row():
                     clear_btn = gr.Button("🗑️ Clear Inputs")
                     generate_btn = gr.Button("🚀 GENERATE", variant="primary")
+
+            # --- Sidebar ---
+            with gr.Column(scale=1, min_width=100):
+                gr.Markdown("### 🛠️ Tools")
+                gr.Button("Studio", variant="primary")
+                gr.Button("About")
+                gr.Button("Help")
 
         # --- Event Handling & Logic ---
         def run_generation(
