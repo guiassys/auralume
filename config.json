@@ -10,7 +10,7 @@
         "field recordings", "rain sounds", "city ambience", "cassette noise",
         "vinyl crackle", "fx textures", "glass harmonica", "cajon"
     ],
-    "default_instruments": ["acoustic bass", "acoustic guitar"],
+    "default_instruments": ["rhodes", "lofi drums", "electric bass", "vinyl crackle", "ambient pads"],
     "generator_settings": {
         "embedding_size": 128,
         "key": "C minor",
@@ -26,12 +26,12 @@
         "temperature": 1.0
     },
     "architect_settings": {
-        "bpm_range": [70, 90],
+        "bpm_range": [65, 80],
         "structure": [
-            {"name": "intro", "ratio": 0.1, "desc": "minimal, buildup, soft textures"},
-            {"name": "verse", "ratio": 0.4, "desc": "groove, melodic progression"},
-            {"name": "chorus", "ratio": 0.35, "desc": "full energy, layered, emotional"},
-            {"name": "outro", "ratio": 0.15, "desc": "fading out, decay, resolution"}
+            {"name": "intro", "ratio": 0.15, "desc": "soft textures, vinyl noise, gentle chords"},
+            {"name": "main_loop", "ratio": 0.55, "desc": "steady groove, mellow chords, simple melody, repetitive"},
+            {"name": "variation", "ratio": 0.2, "desc": "subtle changes, added layers or melodic variation"},
+            {"name": "outro", "ratio": 0.1, "desc": "elements gradually fade, filtered ending"}
         ]
     },
     "ui_settings": {
