@@ -126,7 +126,7 @@ def create_ui():
 
             # --- Sidebar ---
             with gr.Column(scale=1, min_width=100):
-                gr.Markdown("### Actions")
+                gr.Markdown("### ⚡ Actions")
                 
                 # --- Main Actions ---
                 with gr.Column():
