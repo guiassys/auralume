@@ -128,8 +128,8 @@ def create_ui():
                         with gr.Group():
                             gr.Markdown("#### Audio Processing")
                             with gr.Row():
-                                chunk_duration_input = gr.Slider(label="Chunk Duration (s)", minimum=SETTINGS["ui_settings"]["chunk_duration"]["min"], maximum=SETTINGS["ui_settings"]["chunk_duration"]["max"], value=SETTINGS["generator_settings"]["chunk_duration"], step=SETTINGS["ui_settings"]["chunk_duration"]["step"])
-                                overlap_duration_input = gr.Slider(label="Overlap Duration (s)", minimum=SETTINGS["ui_settings"]["overlap_duration"]["min"], maximum=SETTINGS["ui_settings"]["overlap_duration"]["max"], value=SETTINGS["generator_settings"]["overlap_duration"], step=SETTINGS["ui_settings"]["overlap_duration"]["step"])
+                                chunk_duration_input = gr.Slider(label="Chunk Duration (s)", minimum=SETTINGS["ui_settings"]["chunk_duration_s"]["min"], maximum=SETTINGS["ui_settings"]["chunk_duration_s"]["max"], value=SETTINGS["generator_settings"]["chunk_duration_s"], step=SETTINGS["ui_settings"]["chunk_duration_s"]["step"])
+                                continuation_primer_input = gr.Slider(label="Continuation Primer (s)", minimum=SETTINGS["ui_settings"]["continuation_primer_s"]["min"], maximum=SETTINGS["ui_settings"]["continuation_primer_s"]["max"], value=SETTINGS["generator_settings"]["continuation_primer_s"], step=SETTINGS["ui_settings"]["continuation_primer_s"]["step"])
                             with gr.Row():
                                 fade_in_input = gr.Slider(label="Fade-In (s)", minimum=SETTINGS["ui_settings"]["fade_in_duration"]["min"], maximum=SETTINGS["ui_settings"]["fade_in_duration"]["max"], value=SETTINGS["generator_settings"]["fade_in_duration"], step=SETTINGS["ui_settings"]["fade_in_duration"]["step"])
                                 fade_out_input = gr.Slider(label="Fade-Out (s)", minimum=SETTINGS["ui_settings"]["fade_out_duration"]["min"], maximum=SETTINGS["ui_settings"]["fade_out_duration"]["max"], value=SETTINGS["generator_settings"]["fade_out_duration"], step=SETTINGS["ui_settings"]["fade_out_duration"]["step"])
@@ -151,28 +151,25 @@ def create_ui():
                     progress_bar = gr.Slider(label="Rendering Progress", value=0, interactive=False, elem_classes=["glowing-progress"], visible=False)
 
         # --- Helper Functions (Scoped within create_ui) ---
-        def _validate_inputs(prompt: str, structure: str) -> Tuple[Optional[dict], Optional[str]]:
+        def _validate_inputs(prompt: str) -> Optional[str]:
             if not prompt.strip():
-                return None, "Prompt is required."
-            try:
-                return json.loads(structure), None
-            except json.JSONDecodeError:
-                return None, "Invalid JSON format in Structure."
+                return "Prompt is required."
+            return None
 
-        def _build_generation_config(structure_data: dict, *args) -> Dict[str, Any]:
+        def _build_generation_config(*args) -> Dict[str, Any]:
             (duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
              embedding_size, output_dir, output_sufix, audio_format, generate_midi,
-             temperature, model_size, quantization, max_new_tokens, chunk_duration, overlap_duration,
+             temperature, model_size, quantization, max_new_tokens, chunk_duration, continuation_primer,
              fade_in, fade_out) = args
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             name = f"{timestamp}_{output_sufix}"
             return {
                 "name": name, "duration": duration, "prompt": prompt, "genre": genre, "vibe": mood,
                 "instruments": instruments, "bpm_range": [bpm_min, bpm_max], "key": key,
-                "structure": structure_data, "embedding_size": embedding_size, "output_dir": output_dir,
+                "embedding_size": embedding_size, "output_dir": output_dir,
                 "audio_format": audio_format, "generate_midi": generate_midi, "temperature": temperature,
                 "model_size": model_size, "quantization": quantization, "max_new_tokens": max_new_tokens, 
-                "chunk_duration": chunk_duration, "overlap_duration": overlap_duration, 
+                "chunk_duration_s": chunk_duration, "continuation_primer_s": continuation_primer,
                 "fade_in_duration": fade_in, "fade_out_duration": fade_out
             }
 
@@ -185,8 +182,8 @@ def create_ui():
                 progress_bar: gr.update(value=0, label="Rendering... 0%", visible=True)
             }
 
-        def _ui_update_progress(log_history: List[str], i: int, num_chunks: int):
-            progress_val = min(0.95, (i + 1) / num_chunks) if num_chunks > 0 else 0
+        def _ui_update_progress(log_history: List[str], current_step: int, total_steps: int):
+            progress_val = min(0.95, current_step / total_steps) if total_steps > 0 else 0
             return {
                 status_output: "\n".join(log_history),
                 progress_bar: gr.update(value=progress_val, label=f"Rendering... {int(progress_val * 100)}%")
@@ -216,11 +213,11 @@ def create_ui():
         # --- Main Event Handler ---
         def run_generation(
             duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
-            structure, embedding_size,
+            embedding_size,
             output_dir, output_sufix, audio_format, generate_midi, temperature, model_size, quantization, max_new_tokens,
-            chunk_duration, overlap_duration, fade_in, fade_out
+            chunk_duration, continuation_primer, fade_in, fade_out
         ):
-            structure_data, error = _validate_inputs(prompt, structure)
+            error = _validate_inputs(prompt)
             if error:
                 gr.Warning(error)
                 yield {tabs: gr.update(selected=0), status_output: f"Error: {error}"}
@@ -231,14 +228,17 @@ def create_ui():
             config_args = (
                 duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
                 embedding_size, output_dir, output_sufix, audio_format, generate_midi,
-                temperature, model_size, quantization, max_new_tokens, chunk_duration, overlap_duration,
+                temperature, model_size, quantization, max_new_tokens, chunk_duration, continuation_primer,
                 fade_in, fade_out
             )
-            config = _build_generation_config(structure_data, *config_args)
+            config = _build_generation_config(*config_args)
 
             log_stream, log_history = LogStream(), []
             generation_task_result = {"result": None}
-            num_chunks = len(structure_data)
+
+            # State for dynamic progress bar
+            progress_state = {"current": 0, "total": 1}
+            progress_pattern = re.compile(r"Generating section (\d+)/(\d+)")
 
             def generation_task():
                 try:
@@ -249,10 +249,16 @@ def create_ui():
             thread = threading.Thread(target=generation_task)
             thread.start()
 
-            for i, log_message in enumerate(log_stream.stream_generator()):
+            for log_message in log_stream.stream_generator():
                 log_history.append(log_message)
-                yield _ui_update_progress(log_history, i, num_chunks)
-                time.sleep(0.1)
+
+                match = progress_pattern.search(log_message)
+                if match:
+                    progress_state["current"] = int(match.group(1))
+                    progress_state["total"] = int(match.group(2))
+
+                yield _ui_update_progress(log_history, progress_state["current"], progress_state["total"])
+                time.sleep(0.05) # Shorter sleep for responsiveness
 
             thread.join()
             result = generation_task_result["result"]
@@ -266,18 +272,20 @@ def create_ui():
         # --- Event Binding ---
         all_inputs = [
             duration_input, prompt_input, genre_input, mood_input, instruments_input, bpm_min_input, bpm_max_input, key_input,
-            structure_input, embedding_size_input,
+            embedding_size_input,
             output_dir_input, output_sufix_input, audio_format_input, generate_midi_input, temperature_input, model_size_input, quantization_input, max_new_tokens_input,
-            chunk_duration_input, overlap_duration_input, fade_in_input, fade_out_input
+            chunk_duration_input, continuation_primer_input, fade_in_input, fade_out_input
         ]
         
         all_outputs = [
             tabs, status_output, generate_btn, clear_btn, progress_bar, file_output, audio_preview
         ]
 
+        # Remove structure_input from the click event as it's no longer used for progress calculation
         generate_btn.click(fn=run_generation, inputs=all_inputs, outputs=all_outputs)
 
         def clear_form():
+            # ... (rest of the clear_form function remains the same, just ensure keys match new config)
             return {
                 prompt_input: "",
                 duration_input: SETTINGS["ui_settings"]["duration"]["default"],
@@ -297,8 +305,8 @@ def create_ui():
                 model_size_input: SETTINGS["generator_settings"]["model_size"],
                 quantization_input: SETTINGS["generator_settings"]["quantization"],
                 max_new_tokens_input: SETTINGS["generator_settings"]["max_new_tokens"],
-                chunk_duration_input: SETTINGS["generator_settings"]["chunk_duration"],
-                overlap_duration_input: SETTINGS["generator_settings"]["overlap_duration"],
+                chunk_duration_input: SETTINGS["generator_settings"]["chunk_duration_s"],
+                continuation_primer_input: SETTINGS["generator_settings"]["continuation_primer_s"],
                 fade_in_input: SETTINGS["generator_settings"]["fade_in_duration"],
                 fade_out_input: SETTINGS["generator_settings"]["fade_out_duration"],
                 status_output: "",
@@ -312,7 +320,7 @@ def create_ui():
             bpm_min_input, bpm_max_input, key_input, structure_input, embedding_size_input,
             output_dir_input, output_sufix_input, audio_format_input, generate_midi_input, 
             temperature_input, model_size_input, quantization_input, max_new_tokens_input,
-            chunk_duration_input, overlap_duration_input, fade_in_input, fade_out_input,
+            chunk_duration_input, continuation_primer_input, fade_in_input, fade_out_input,
             status_output, file_output, audio_preview, progress_bar
         ]
         clear_btn.click(fn=clear_form, outputs=clear_outputs)

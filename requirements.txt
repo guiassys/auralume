@@ -9,6 +9,7 @@ Pillow>=10.3.0
 opencv-python>=4.9.0
 pydub>=0.25.1
 mido>=1.2.10
+bitsandbytes>=0.46.1
 
 # Pipeline
 langchain>=1.2.0

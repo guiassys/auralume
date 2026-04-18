@@ -36,6 +36,7 @@ class MusicGenerationService:
         engine_config = MusicGenConfig(
             model_size=self.generator_settings.get("model_size", "medium"),
             sample_rate=self.generator_settings.get("sample_rate", 32000),
+            quantization=self.generator_settings.get("quantization", None)
         )
         self.engine = MusicGenEngine(config=engine_config)
         self._lock = threading.Lock()
@@ -55,8 +56,9 @@ class MusicGenerationService:
         path = os.path.join(output_dir, f"{name}.wav")
         audio_np = audio.to(torch.float32).cpu().numpy().T
         
+        # Safe normalization to avoid silencing the whole track due to one peak clip
         peak = np.max(np.abs(audio_np))
-        if peak > 0:
+        if peak > 1.0:
             audio_np /= peak
             
         sf.write(path, audio_np, sr)
@@ -68,8 +70,9 @@ class MusicGenerationService:
         if fade_samples > audio.shape[1]:
             fade_samples = audio.shape[1]
         
-        fade = torch.linspace(1, 0, fade_samples, device=audio.device, dtype=audio.dtype).unsqueeze(0)
-        audio[:, -fade_samples:] *= fade
+        if fade_samples > 0:
+            fade = torch.linspace(1, 0, fade_samples, device=audio.device, dtype=audio.dtype).unsqueeze(0)
+            audio[:, -fade_samples:] *= fade
         return audio
 
     def generate_music(self, config: Dict[str, Any], log_stream: Optional[LogStream] = None) -> Dict[str, Any]:
@@ -84,20 +87,10 @@ class MusicGenerationService:
             try:
                 _log(f"Starting advanced pipeline for project: {config.get('name', 'Unnamed')}")
                 
-                # Use the full config from the UI, but pass the loaded engine
                 pipeline = MusicPipeline(self.engine, self.config, log_stream)
                 
-                # Prepare inputs for the pipeline
-                bpm_range = config.get("bpm_range", [70, 90])
-                bpm = random.randint(bpm_range[0], bpm_range[1])
-                
-                result = pipeline.build(
-                    prompt=config["prompt"],
-                    duration=config["duration"],
-                    style=config.get("genre", ""),
-                    bpm=bpm,
-                    key=config["key"]
-                )
+                # Pass the full configuration dynamically
+                result = pipeline.build(**config)
                 
                 final_audio = result["audio"]
                 sr = result["sr"]
