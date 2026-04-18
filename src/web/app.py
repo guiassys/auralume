@@ -93,7 +93,8 @@ def create_ui():
                                 label="Structure (JSON format)",
                                 value=json.dumps(SETTINGS["architect_settings"]["structure"], indent=4),
                                 lines=8,
-                                elem_id="json-input" 
+                                elem_id="json-input",
+                                interactive=True # Fixed: Explicitly made it interactive
                             )
                         
                         with gr.Accordion("Instruments", open=False):
@@ -160,12 +161,19 @@ def create_ui():
             (duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
              embedding_size, output_dir, output_sufix, audio_format, generate_midi,
              temperature, model_size, quantization, max_new_tokens, chunk_duration, continuation_primer,
-             fade_in, fade_out) = args
+             fade_in, fade_out, structure_json) = args
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             name = f"{timestamp}_{output_sufix}"
+            
+            try:
+                structure = json.loads(structure_json)
+            except:
+                structure = SETTINGS["architect_settings"]["structure"]
+                
             return {
                 "name": name, "duration": duration, "prompt": prompt, "genre": genre, "vibe": mood,
                 "instruments": instruments, "bpm_range": [bpm_min, bpm_max], "key": key,
+                "structure": structure,
                 "embedding_size": embedding_size, "output_dir": output_dir,
                 "audio_format": audio_format, "generate_midi": generate_midi, "temperature": temperature,
                 "model_size": model_size, "quantization": quantization, "max_new_tokens": max_new_tokens, 
@@ -215,7 +223,7 @@ def create_ui():
             duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
             embedding_size,
             output_dir, output_sufix, audio_format, generate_midi, temperature, model_size, quantization, max_new_tokens,
-            chunk_duration, continuation_primer, fade_in, fade_out
+            chunk_duration, continuation_primer, fade_in, fade_out, structure_json
         ):
             error = _validate_inputs(prompt)
             if error:
@@ -229,7 +237,7 @@ def create_ui():
                 duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
                 embedding_size, output_dir, output_sufix, audio_format, generate_midi,
                 temperature, model_size, quantization, max_new_tokens, chunk_duration, continuation_primer,
-                fade_in, fade_out
+                fade_in, fade_out, structure_json
             )
             config = _build_generation_config(*config_args)
 
@@ -238,7 +246,7 @@ def create_ui():
 
             # State for dynamic progress bar
             progress_state = {"current": 0, "total": 1}
-            progress_pattern = re.compile(r"Generating section (\d+)/(\d+)")
+            progress_pattern = re.compile(r"Generating step (\d+)/(\d+)")
 
             def generation_task():
                 try:
@@ -257,6 +265,7 @@ def create_ui():
                     progress_state["current"] = int(match.group(1))
                     progress_state["total"] = int(match.group(2))
 
+                # Yielding only the exact elements needed for progress updates
                 yield _ui_update_progress(log_history, progress_state["current"], progress_state["total"])
                 time.sleep(0.05) # Shorter sleep for responsiveness
 
@@ -274,18 +283,16 @@ def create_ui():
             duration_input, prompt_input, genre_input, mood_input, instruments_input, bpm_min_input, bpm_max_input, key_input,
             embedding_size_input,
             output_dir_input, output_sufix_input, audio_format_input, generate_midi_input, temperature_input, model_size_input, quantization_input, max_new_tokens_input,
-            chunk_duration_input, continuation_primer_input, fade_in_input, fade_out_input
+            chunk_duration_input, continuation_primer_input, fade_in_input, fade_out_input, structure_input
         ]
         
         all_outputs = [
             tabs, status_output, generate_btn, clear_btn, progress_bar, file_output, audio_preview
         ]
 
-        # Remove structure_input from the click event as it's no longer used for progress calculation
         generate_btn.click(fn=run_generation, inputs=all_inputs, outputs=all_outputs)
 
         def clear_form():
-            # ... (rest of the clear_form function remains the same, just ensure keys match new config)
             return {
                 prompt_input: "",
                 duration_input: SETTINGS["ui_settings"]["duration"]["default"],
