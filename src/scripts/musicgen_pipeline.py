@@ -120,7 +120,7 @@ class MusicComposer:
         # Only add instruments if they are explicitly selected
         instruments = inputs.get("instruments", [])
         if instruments:
-            base_style_parts.append(", ".join(instruments))
+            base_style_parts.extend(instruments) # Extend, not append a single joined string
 
         base_style_prompt = ", ".join(filter(None, base_style_parts))
 
