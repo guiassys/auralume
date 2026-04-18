@@ -6,6 +6,7 @@ import gradio as gr
 import logging
 import os
 import json
+import re
 import sys
 import threading
 import time
@@ -18,6 +19,15 @@ from src.web.ui_theme import auralume_theme, custom_css
 # --- Logging Configuration ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# --- Path Conversion Utility ---
+def _convert_path_for_wsl(path: str) -> str:
+    """Converts a Windows-style path to a WSL-compatible path if necessary."""
+    if re.match(r"^[a-zA-Z]:[\\/]", path):
+        path = path.replace("\\", "/")
+        drive, rest_of_path = path.split(":", 1)
+        return f"/mnt/{drive.lower()}{rest_of_path}"
+    return path
 
 # --- Configuration Loading ---
 def load_app_settings():
@@ -311,8 +321,14 @@ interface = create_ui()
 # --- Main Execution ---
 if __name__ == "__main__":
     server_settings = SETTINGS.get("server_settings", {})
+    
+    # Prepare allowed paths for Gradio
+    output_dir_raw = SETTINGS.get("generator_settings", {}).get("output_dir", "outputs")
+    allowed_path = _convert_path_for_wsl(output_dir_raw)
+    
     interface.launch(
         server_name=server_settings.get("server_name", "127.0.0.1"),
         server_port=server_settings.get("server_port", 7860),
-        show_error=server_settings.get("show_error", True)
+        show_error=server_settings.get("show_error", True),
+        allowed_paths=[allowed_path]
     )

@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import math
+import re
 from datetime import datetime
 from typing import Dict, Any, Optional
 
@@ -33,6 +34,24 @@ class TrackGenerator:
         )
         self.engine = engine or MusicGenEngine(config=engine_config)
 
+    def _convert_path_for_wsl(self, path: str) -> str:
+        """
+        Converts a Windows-style path to a WSL-compatible path if necessary.
+        Example: C:\\Users\\user -> /mnt/c/Users/user
+        It also handles forward slashes in Windows paths.
+        """
+        # Check if the path looks like a Windows path (e.g., "C:\..." or "C:/...")
+        if re.match(r"^[a-zA-Z]:[\\/]", path):
+            self.logger.info(f"Detected Windows-style path: {path}. Converting for WSL.")
+            path = path.replace("\\", "/")
+            drive, rest_of_path = path.split(":", 1)
+            wsl_path = f"/mnt/{drive.lower()}{rest_of_path}"
+            self.logger.info(f"Converted path: {wsl_path}")
+            return wsl_path
+        
+        # If it's already a Linux-style path (relative or absolute), return it as is.
+        return path
+
     def generate(self, config: Dict[str, Any], log_stream: Optional[LogStream] = None) -> str:
         prompt = config.get("prompt", "lofi music")
         duration = int(config.get("duration", 180))
@@ -44,7 +63,10 @@ class TrackGenerator:
         key = config.get("key", self.generator_settings.get("key", "C minor"))
         temperature = config.get("temperature", self.generator_settings.get("temperature", 1.0))
         max_new_tokens = config.get("max_new_tokens", self.generator_settings.get("max_new_tokens", 1500))
-        output_dir = config.get("output_dir", self.generator_settings.get("output_dir", "outputs"))
+        
+        # Get raw output_dir and convert it for the current environment
+        output_dir_raw = config.get("output_dir", self.generator_settings.get("output_dir", "outputs"))
+        output_dir = self._convert_path_for_wsl(output_dir_raw)
 
         def _log(message: str):
             self.logger.info(f"[GENERATOR] {message}")
@@ -59,11 +81,10 @@ class TrackGenerator:
         chunk_duration = self.generator_settings.get("chunk_duration", 10)
         overlap_duration = self.generator_settings.get("overlap_duration", 2)
         
-        # Corrected calculation for num_chunks
         effective_chunk_duration = chunk_duration - overlap_duration
         if duration <= chunk_duration:
             num_chunks = 1
-            gen_duration = duration # Generate exact duration if less than a chunk
+            gen_duration = duration
         else:
             num_chunks = 1 + math.ceil((duration - chunk_duration) / effective_chunk_duration)
             gen_duration = chunk_duration
@@ -83,7 +104,6 @@ class TrackGenerator:
         for i in range(1, num_chunks):
             _log(f"Generating continuation chunk ({i + 1}/{num_chunks})...")
             
-            # Increase context for the prompt audio
             prompt_context_duration = min(overlap_duration + 1, full_audio.shape[1] / sr)
             prompt_audio = full_audio[:, -int(prompt_context_duration * sr):]
 
@@ -99,7 +119,6 @@ class TrackGenerator:
             full_audio = self._crossfade_and_append(full_audio, continuation_audio.squeeze(0), overlap_duration, sr)
             _log(f"Continuation chunk {i + 1}/{num_chunks} added.")
 
-        # Trim audio to the exact requested duration
         final_samples = int(duration * sr)
         if full_audio.shape[1] > final_samples:
             full_audio = full_audio[:, :final_samples]
@@ -111,6 +130,7 @@ class TrackGenerator:
         _log("Post-processing complete.")
 
         _log("Saving final audio file...")
+        _log(f"Target directory: {output_dir}")
         os.makedirs(output_dir, exist_ok=True)
         path = self._save_audio(final_audio, sr, name, output_dir)
         _log(f"Audio saved successfully to: {os.path.basename(path)}")
@@ -144,9 +164,8 @@ class TrackGenerator:
         fade_out = torch.linspace(1, 0, overlap_samples, device=audio1.device, dtype=audio1.dtype).unsqueeze(0)
         fade_in = torch.linspace(0, 1, overlap_samples, device=audio1.device, dtype=audio1.dtype).unsqueeze(0)
 
-        # Ensure tensors have enough samples for overlap
         if audio1.shape[1] < overlap_samples or audio2.shape[1] < overlap_samples:
-             _log("Warning: Audio chunk is smaller than overlap, skipping crossfade.")
+             self.logger.warning("Audio chunk is smaller than overlap, skipping crossfade.")
              return torch.cat([audio1, audio2], dim=1)
 
         crossfaded_part = audio1[:, -overlap_samples:] * fade_out + audio2[:, :overlap_samples] * fade_in

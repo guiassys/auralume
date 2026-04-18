@@ -14,7 +14,7 @@
     "generator_settings": {
         "embedding_size": 128,
         "key": "C minor",
-        "output_dir": "outputs",
+        "output_dir": "C:\\ASSETS\\Apexlone\\Aelion\\Album_Fragments_of_Silence\\03_GENERATED\\audio",
         "output_sufix": "v01_gen",
         "chunk_duration": 10,
         "overlap_duration": 2,
