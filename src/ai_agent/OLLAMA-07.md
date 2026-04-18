@@ -32,7 +32,7 @@ Redesign the Gradio interface to mimic a professional DAW (e.g., Ableton Live, F
 3.  **Main Workspace (Tabbed Interface):**
     * **Tab 1: Track Definitions:** Genre, BPM, Key, Mood, and Style Prompt.
     * **Tab 2: Studio Adjustments:** Sliders for Reverb, Delay, Compression, and Instrument selection.
-    * **Tab 3: Studio Console:** Waveform visualization and Export options (WAV/MP3).
+    * **Tab 3: Console:** Waveform visualization and Export options (WAV/MP3).
 4.  **Footer:** Session timer, versioning, and system links.
 
 ### C. Interaction Logic (UX)

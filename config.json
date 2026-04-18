@@ -15,6 +15,7 @@
         "bpm": 85,
         "key": "C minor",
         "output_dir": "outputs",
+        "output_sufix": "v01_gen",
         "chunk_duration": 10,
         "overlap_duration": 2,
         "fade_in_duration": 1,
