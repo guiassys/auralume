@@ -66,7 +66,6 @@ def create_ui():
         # --- Header ---
         with gr.Row(elem_classes=["header"]):
             gr.Markdown("## 🎹 Auralume", elem_id="logo")
-            progress_bar = gr.Slider(label="Rendering Progress", value=0, interactive=False, elem_classes=["glowing-progress"])
         
         with gr.Row():
             # --- Main Workspace ---
@@ -75,7 +74,6 @@ def create_ui():
                     # --- Tab 1: Track Definitions ---
                     with gr.TabItem("🎵 Track Definitions", id=0):
                         with gr.Group():
-                            name_input = gr.Textbox(label="Project Name", placeholder="e.g., Lofi_Night_Drive")
                             prompt_input = gr.Textbox(label="Style Prompt", placeholder="e.g., lofi, chill, synthwave, 80s", lines=3)
                         with gr.Row():
                             bpm_input = gr.Slider(label="BPM (Beats Per Minute)", minimum=40, maximum=160, value=SETTINGS["generator_settings"]["bpm"], step=1)
@@ -123,22 +121,20 @@ def create_ui():
                         with gr.Row():
                             file_output = gr.File(label="Download Files", visible=False)
                             audio_preview = gr.Audio(label="Master Preview", type="filepath", visible=False)
-                
-                # --- Main Actions ---
-                with gr.Row():
-                    clear_btn = gr.Button("🗑️ Clear Inputs")
-                    generate_btn = gr.Button("🚀 GENERATE", variant="primary")
 
             # --- Sidebar ---
             with gr.Column(scale=1, min_width=100):
-                gr.Markdown("### 🛠️ Tools")
-                gr.Button("Studio", variant="primary")
-                gr.Button("About")
-                gr.Button("Help")
+                gr.Markdown("### Actions")
+                
+                # --- Main Actions ---
+                with gr.Column():
+                    clear_btn = gr.Button("🗑️ Clear Inputs")
+                    generate_btn = gr.Button("🚀 GENERATE", variant="primary")
+                    progress_bar = gr.Slider(label="Rendering Progress", value=0, interactive=False, elem_classes=["glowing-progress"], visible=False)
 
         # --- Event Handling & Logic ---
         def run_generation(
-            name, duration, prompt, genre, mood, instruments, bpm, key,
+            duration, prompt, genre, mood, instruments, bpm, key,
             output_dir, audio_format, generate_midi, temperature, model_size, max_new_tokens,
             chunk_duration, overlap_duration, fade_in, fade_out
         ):
@@ -151,10 +147,15 @@ def create_ui():
                 tabs: gr.update(selected=2), status_output: "Initializing generation...",
                 generate_btn: gr.update(interactive=False, value="Generating..."),
                 clear_btn: gr.update(interactive=False),
-                progress_bar: gr.update(value=0, label="Rendering... 0%")
+                progress_bar: gr.update(value=0, label="Rendering... 0%", visible=True)
             }
 
             log_stream, log_history = LogStream(), []
+            
+            # Generate a timestamp-based name
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            name = f"{timestamp}_v01_gen"
+
             config = {
                 "name": name, "duration": duration, "prompt": prompt, "genre": genre, "vibe": mood, 
                 "instruments": instruments, "bpm": bpm, "key": key, "output_dir": output_dir, 
@@ -193,7 +194,7 @@ def create_ui():
                     audio_preview: gr.update(value=result["files"][0], visible=True),
                     generate_btn: gr.update(interactive=True, value="🚀 GENERATE"),
                     clear_btn: gr.update(interactive=True),
-                    progress_bar: gr.update(value=1, label="Rendering Complete")
+                    progress_bar: gr.update(value=1, label="Rendering Complete", visible=False)
                 }
             else:
                 error_msg = result.get('error', "Unknown error") if result else "Unknown error"
@@ -203,11 +204,11 @@ def create_ui():
                     status_output: "\n".join(log_history),
                     generate_btn: gr.update(interactive=True, value="🚀 GENERATE"),
                     clear_btn: gr.update(interactive=True),
-                    progress_bar: gr.update(value=0, label="Rendering Failed")
+                    progress_bar: gr.update(value=0, label="Rendering Failed", visible=False)
                 }
 
         all_inputs = [
-            name_input, duration_input, prompt_input, genre_input, mood_input, instruments_input, bpm_input, key_input,
+            duration_input, prompt_input, genre_input, mood_input, instruments_input, bpm_input, key_input,
             output_dir_input, audio_format_input, generate_midi_input, temperature_input, model_size_input, max_new_tokens_input,
             chunk_duration_input, overlap_duration_input, fade_in_input, fade_out_input
         ]
@@ -215,7 +216,7 @@ def create_ui():
 
         def clear_form():
             return {
-                name_input: "", prompt_input: "",
+                prompt_input: "",
                 duration_input: SETTINGS["ui_settings"]["duration"]["default"],
                 genre_input: SETTINGS["ui_settings"]["genres"][0],
                 mood_input: SETTINGS["ui_settings"]["moods"][0],
@@ -233,11 +234,11 @@ def create_ui():
                 fade_out_input: SETTINGS["generator_settings"]["fade_out_duration"],
                 status_output: "", file_output: gr.update(visible=False),
                 audio_preview: gr.update(visible=False),
-                progress_bar: gr.update(value=0, label="Rendering Progress"),
+                progress_bar: gr.update(value=0, label="Rendering Progress", visible=False),
             }
 
         clear_outputs = [
-            name_input, prompt_input, duration_input, genre_input, mood_input, instruments_input, bpm_input, key_input,
+            prompt_input, duration_input, genre_input, mood_input, instruments_input, bpm_input, key_input,
             output_dir_input, audio_format_input, generate_midi_input, temperature_input, model_size_input, max_new_tokens_input,
             chunk_duration_input, overlap_duration_input, fade_in_input, fade_out_input,
             status_output, file_output, audio_preview, progress_bar
