@@ -21,6 +21,7 @@
         "fade_in_duration": 1,
         "fade_out_duration": 1,
         "model_size": "medium",
+        "quantization": "none",
         "sample_rate": 32000,
         "max_new_tokens": 1500,
         "temperature": 1.0

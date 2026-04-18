@@ -116,6 +116,7 @@ def create_ui():
                             gr.Markdown("#### Advanced Model Settings")
                             with gr.Row():
                                 model_size_input = gr.Dropdown(label="Model Size", choices=["small", "medium", "large"], value=SETTINGS["generator_settings"]["model_size"])
+                                quantization_input = gr.Dropdown(label="Quantization", choices=["none", "8bit", "4bit"], value=SETTINGS["generator_settings"]["quantization"])
                                 max_new_tokens_input = gr.Slider(label="Max New Tokens", minimum=SETTINGS["ui_settings"]["max_new_tokens"]["min"], maximum=SETTINGS["ui_settings"]["max_new_tokens"]["max"], value=SETTINGS["generator_settings"]["max_new_tokens"], step=SETTINGS["ui_settings"]["max_new_tokens"]["step"])
                                 embedding_size_input = gr.Slider(
                                     label="Embedding Size",
@@ -161,7 +162,7 @@ def create_ui():
         def _build_generation_config(structure_data: dict, *args) -> Dict[str, Any]:
             (duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
              embedding_size, output_dir, output_sufix, audio_format, generate_midi,
-             temperature, model_size, max_new_tokens, chunk_duration, overlap_duration,
+             temperature, model_size, quantization, max_new_tokens, chunk_duration, overlap_duration,
              fade_in, fade_out) = args
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             name = f"{timestamp}_{output_sufix}"
@@ -170,8 +171,9 @@ def create_ui():
                 "instruments": instruments, "bpm_range": [bpm_min, bpm_max], "key": key,
                 "structure": structure_data, "embedding_size": embedding_size, "output_dir": output_dir,
                 "audio_format": audio_format, "generate_midi": generate_midi, "temperature": temperature,
-                "model_size": model_size, "max_new_tokens": max_new_tokens, "chunk_duration": chunk_duration,
-                "overlap_duration": overlap_duration, "fade_in_duration": fade_in, "fade_out_duration": fade_out
+                "model_size": model_size, "quantization": quantization, "max_new_tokens": max_new_tokens, 
+                "chunk_duration": chunk_duration, "overlap_duration": overlap_duration, 
+                "fade_in_duration": fade_in, "fade_out_duration": fade_out
             }
 
         def _ui_start_generation():
@@ -183,8 +185,8 @@ def create_ui():
                 progress_bar: gr.update(value=0, label="Rendering... 0%", visible=True)
             }
 
-        def _ui_update_progress(log_history: List[str], i: int):
-            progress_val = min(0.95, (i + 1) / 25)
+        def _ui_update_progress(log_history: List[str], i: int, num_chunks: int):
+            progress_val = min(0.95, (i + 1) / num_chunks) if num_chunks > 0 else 0
             return {
                 status_output: "\n".join(log_history),
                 progress_bar: gr.update(value=progress_val, label=f"Rendering... {int(progress_val * 100)}%")
@@ -215,7 +217,7 @@ def create_ui():
         def run_generation(
             duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
             structure, embedding_size,
-            output_dir, output_sufix, audio_format, generate_midi, temperature, model_size, max_new_tokens,
+            output_dir, output_sufix, audio_format, generate_midi, temperature, model_size, quantization, max_new_tokens,
             chunk_duration, overlap_duration, fade_in, fade_out
         ):
             structure_data, error = _validate_inputs(prompt, structure)
@@ -229,13 +231,14 @@ def create_ui():
             config_args = (
                 duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
                 embedding_size, output_dir, output_sufix, audio_format, generate_midi,
-                temperature, model_size, max_new_tokens, chunk_duration, overlap_duration,
+                temperature, model_size, quantization, max_new_tokens, chunk_duration, overlap_duration,
                 fade_in, fade_out
             )
             config = _build_generation_config(structure_data, *config_args)
 
             log_stream, log_history = LogStream(), []
             generation_task_result = {"result": None}
+            num_chunks = len(structure_data)
 
             def generation_task():
                 try:
@@ -248,7 +251,7 @@ def create_ui():
 
             for i, log_message in enumerate(log_stream.stream_generator()):
                 log_history.append(log_message)
-                yield _ui_update_progress(log_history, i)
+                yield _ui_update_progress(log_history, i, num_chunks)
                 time.sleep(0.1)
 
             thread.join()
@@ -264,7 +267,7 @@ def create_ui():
         all_inputs = [
             duration_input, prompt_input, genre_input, mood_input, instruments_input, bpm_min_input, bpm_max_input, key_input,
             structure_input, embedding_size_input,
-            output_dir_input, output_sufix_input, audio_format_input, generate_midi_input, temperature_input, model_size_input, max_new_tokens_input,
+            output_dir_input, output_sufix_input, audio_format_input, generate_midi_input, temperature_input, model_size_input, quantization_input, max_new_tokens_input,
             chunk_duration_input, overlap_duration_input, fade_in_input, fade_out_input
         ]
         
@@ -292,6 +295,7 @@ def create_ui():
                 generate_midi_input: False,
                 temperature_input: SETTINGS["generator_settings"]["temperature"],
                 model_size_input: SETTINGS["generator_settings"]["model_size"],
+                quantization_input: SETTINGS["generator_settings"]["quantization"],
                 max_new_tokens_input: SETTINGS["generator_settings"]["max_new_tokens"],
                 chunk_duration_input: SETTINGS["generator_settings"]["chunk_duration"],
                 overlap_duration_input: SETTINGS["generator_settings"]["overlap_duration"],
@@ -307,7 +311,7 @@ def create_ui():
             prompt_input, duration_input, genre_input, mood_input, instruments_input, 
             bpm_min_input, bpm_max_input, key_input, structure_input, embedding_size_input,
             output_dir_input, output_sufix_input, audio_format_input, generate_midi_input, 
-            temperature_input, model_size_input, max_new_tokens_input,
+            temperature_input, model_size_input, quantization_input, max_new_tokens_input,
             chunk_duration_input, overlap_duration_input, fade_in_input, fade_out_input,
             status_output, file_output, audio_preview, progress_bar
         ]
@@ -322,7 +326,6 @@ interface = create_ui()
 if __name__ == "__main__":
     server_settings = SETTINGS.get("server_settings", {})
     
-    # Prepare allowed paths for Gradio
     output_dir_raw = SETTINGS.get("generator_settings", {}).get("output_dir", "outputs")
     allowed_path = _convert_path_for_wsl(output_dir_raw)
     

@@ -2,14 +2,21 @@
 
 import logging
 import os
+import re
 import subprocess
-import sys
 import threading
 import time
+import json
+import random
+import torch
+import numpy as np
+import soundfile as sf
 from typing import Optional, Dict, Any
 from pydub import AudioSegment
+from datetime import datetime
 
-from src.scripts.generator import TrackGenerator
+from src.scripts.musicgen_engine import MusicGenEngine, MusicGenConfig
+from src.scripts.musicgen_pipeline import MusicPipeline
 from src.web.log_stream import LogStream
 
 logger = logging.getLogger(__name__)
@@ -20,78 +27,53 @@ class MusicGenerationService:
     Atua como um Orquestrador entre a Interface Web e o Engine de IA.
     """
 
-    def __init__(self):
-        self.generator = TrackGenerator()
+    def __init__(self, config_path: str = "config.json"):
+        with open(config_path, 'r') as f:
+            self.config = json.load(f)
+        
+        self.generator_settings = self.config.get("generator_settings", {})
+        
+        engine_config = MusicGenConfig(
+            model_size=self.generator_settings.get("model_size", "medium"),
+            sample_rate=self.generator_settings.get("sample_rate", 32000),
+        )
+        self.engine = MusicGenEngine(config=engine_config)
         self._lock = threading.Lock()
         self.project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-    def _convert_to_mp3(self, wav_path: str) -> str:
-        """Converts a WAV file to MP3."""
-        mp3_path = wav_path.replace(".wav", ".mp3")
-        audio = AudioSegment.from_wav(wav_path)
-        audio.export(mp3_path, format="mp3")
-        return mp3_path
+    def _convert_path_for_wsl(self, path: str) -> str:
+        if re.match(r"^[a-zA-Z]:[\\/]", path):
+            path = path.replace("\\", "/")
+            drive, rest = path.split(":", 1)
+            return f"/mnt/{drive.lower()}{rest}"
+        return path
 
-    def _transcribe_to_midi(self, audio_path: str, log_stream: Optional[LogStream]) -> Optional[str]:
-        """
-        Calls the dedicated transcription script in a separate Python environment.
-        """
-        def _log(message: str, level: str = "INFO"):
-            logger.info(f"[MIDI] {message}")
-            if log_stream:
-                log_stream.log(message, level)
-
-        midi_venv_python = os.path.join(self.project_root, ".venv-midi", "bin", "python")
-        transcribe_script = os.path.join(self.project_root, "src", "scripts", "transcribe.py")
-
-        if not os.path.exists(midi_venv_python):
-            _log("MIDI generation environment (.venv-midi) not found. Skipping.", level="ERROR")
-            return None
-
-        _log("Starting MIDI transcription process...")
-        command = [midi_venv_python, transcribe_script, audio_path]
-
-        try:
-            process = subprocess.run(
-                command,
-                capture_output=True,
-                text=True,
-                check=True,
-                cwd=self.project_root
-            )
-            _log("Transcription script executed successfully.")
-            for line in process.stdout.splitlines():
-                _log(line)
+    def _save_audio(self, audio: torch.Tensor, sr: int, name: str, output_dir: str) -> str:
+        output_dir = self._convert_path_for_wsl(output_dir)
+        os.makedirs(output_dir, exist_ok=True)
+        
+        path = os.path.join(output_dir, f"{name}.wav")
+        audio_np = audio.to(torch.float32).cpu().numpy().T
+        
+        peak = np.max(np.abs(audio_np))
+        if peak > 0:
+            audio_np /= peak
             
-            midi_path = audio_path.rsplit('.', 1)[0] + ".mid"
-            if os.path.exists(midi_path):
-                _log(f"MIDI file confirmed: {os.path.basename(midi_path)}")
-                return midi_path
-            else:
-                _log("Transcription script finished, but MIDI file not found.", level="ERROR")
-                return None
+        sf.write(path, audio_np, sr)
+        return path
 
-        except subprocess.CalledProcessError as e:
-            _log(f"MIDI transcription script failed with exit code {e.returncode}.", level="ERROR")
-            _log("--- Script Output (stdout) ---", level="ERROR")
-            for line in e.stdout.splitlines():
-                _log(line, level="ERROR")
-            _log("--- Script Errors (stderr) ---", level="ERROR")
-            for line in e.stderr.splitlines():
-                _log(line, level="ERROR")
-            return None
-        except Exception as e:
-            _log(f"An unexpected error occurred while running the transcription script: {e}", level="ERROR")
-            return None
+    def _apply_fade_out(self, audio: torch.Tensor, sr: int) -> torch.Tensor:
+        fade_duration = self.generator_settings.get("fade_out_duration", 2)
+        fade_samples = int(fade_duration * sr)
+        if fade_samples > audio.shape[1]:
+            fade_samples = audio.shape[1]
+        
+        fade = torch.linspace(1, 0, fade_samples, device=audio.device, dtype=audio.dtype).unsqueeze(0)
+        audio[:, -fade_samples:] *= fade
+        return audio
 
-    def generate_music(
-        self,
-        config: Dict[str, Any],
-        log_stream: Optional[LogStream] = None
-    ) -> Dict[str, Any]:
-        """
-        Executa o pipeline de geração com streaming de logs.
-        """
+    def generate_music(self, config: Dict[str, Any], log_stream: Optional[LogStream] = None) -> Dict[str, Any]:
+        """Executa o pipeline de geração avançado com streaming de logs."""
         def _log(message: str, level: str = "INFO"):
             logger.info(f"[SERVICE] {message}")
             if log_stream:
@@ -100,58 +82,68 @@ class MusicGenerationService:
         with self._lock:
             start_time = time.time()
             try:
-                _log(f"Starting the process for project: {config.get('name', 'Unnamed')}")
-                _log(f"Input parameters: {config}")
-
-                _log("Synchronizing with the GPU and loading models...")
-
-                wav_path = self.generator.generate(config=config, log_stream=log_stream)
+                _log(f"Starting advanced pipeline for project: {config.get('name', 'Unnamed')}")
                 
+                # Use the full config from the UI, but pass the loaded engine
+                pipeline = MusicPipeline(self.engine, self.config, log_stream)
+                
+                # Prepare inputs for the pipeline
+                bpm_range = config.get("bpm_range", [70, 90])
+                bpm = random.randint(bpm_range[0], bpm_range[1])
+                
+                result = pipeline.build(
+                    prompt=config["prompt"],
+                    duration=config["duration"],
+                    style=config.get("genre", ""),
+                    bpm=bpm,
+                    key=config["key"]
+                )
+                
+                final_audio = result["audio"]
+                sr = result["sr"]
+                
+                # Final processing (trimming and fading)
+                final_samples = int(config["duration"] * sr)
+                if final_audio.shape[1] > final_samples:
+                    final_audio = final_audio[:, :final_samples]
+                    _log(f"Audio trimmed to {config['duration']}s.")
+                
+                final_audio = self._apply_fade_out(final_audio, sr)
+                _log("Final fade-out applied.")
+
+                # Save the final WAV file
+                wav_path = self._save_audio(final_audio, sr, config["name"], config["output_dir"])
+                _log(f"WAV file saved to: {os.path.basename(wav_path)}")
+
                 primary_audio_path = wav_path
                 generated_files = [wav_path]
 
-                # Convert to MP3 if requested
                 if config.get("audio_format") == ".mp3":
                     _log("Converting to MP3 format...")
-                    mp3_path = self._convert_to_mp3(wav_path)
-                    _log(f"MP3 file created: {os.path.basename(mp3_path)}")
+                    mp3_path = wav_path.replace(".wav", ".mp3")
+                    AudioSegment.from_wav(wav_path).export(mp3_path, format="mp3")
                     os.remove(wav_path)
                     primary_audio_path = mp3_path
                     generated_files = [mp3_path]
-
-                # Generate MIDI file if requested
-                if config.get("generate_midi"):
-                    midi_path = self._transcribe_to_midi(primary_audio_path, log_stream)
-                    if midi_path:
-                        generated_files.append(midi_path)
+                    _log(f"MP3 file created: {os.path.basename(mp3_path)}")
 
                 end_time = time.time()
-                processing_time = time.strftime("%H:%M:%S", time.gmtime(end_time - start_time))
-
-                _log(f"Total processing time: {processing_time}")
+                _log(f"Total processing time: {time.strftime('%H:%M:%S', time.gmtime(end_time - start_time))}")
                 _log(f"Success! Mastered in: {os.path.basename(primary_audio_path)}")
 
-                return {
-                    "success": True,
-                    "files": generated_files,
-                    "error": None
-                }
+                return {"success": True, "files": generated_files, "error": None}
 
             except Exception as e:
                 error_msg = f"Processing failure: {str(e)}"
                 _log(error_msg, level="ERROR")
                 logger.error(f"[SERVICE] {error_msg}", exc_info=True)
-
-                return {
-                    "success": False,
-                    "files": [],
-                    "error": error_msg
-                }
+                return {"success": False, "files": [], "error": error_msg}
 
     def list_generated_files(self, output_dir: str) -> list:
         """Utilitário opcional para listar músicas já criadas na pasta de output."""
         try:
-            files = [f for f in os.listdir(output_dir) if f.endswith(('.wav', '.mp3', '.mid'))]
-            return sorted(files, key=lambda x: os.path.getmtime(os.path.join(output_dir, x)), reverse=True)
+            path = self._convert_path_for_wsl(output_dir)
+            files = [f for f in os.listdir(path) if f.endswith(('.wav', '.mp3', '.mid'))]
+            return sorted(files, key=lambda x: os.path.getmtime(os.path.join(path, x)), reverse=True)
         except Exception:
             return []

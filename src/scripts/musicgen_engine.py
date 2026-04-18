@@ -1,7 +1,7 @@
 import logging as log
 import torch
 from threading import Lock
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Dict, Any
 
 from transformers import MusicgenForConditionalGeneration, AutoProcessor
 
@@ -11,10 +11,11 @@ class MusicGenConfig:
         self,
         model_size: str = "medium",
         sample_rate: int = 32000,
-        max_new_tokens: int = 1500, # Corresponds to ~30s of audio
+        max_new_tokens: int = 1500,
         top_k: int = 250,
         top_p: float = 0.95,
         temperature: float = 1.0,
+        quantization: Optional[str] = None, # "8bit" or "4bit"
     ):
         self.model_size = model_size
         self.sample_rate = sample_rate
@@ -22,6 +23,7 @@ class MusicGenConfig:
         self.top_k = top_k
         self.top_p = top_p
         self.temperature = temperature
+        self.quantization = quantization
 
     @property
     def model_name(self) -> str:
@@ -39,21 +41,44 @@ class MusicGenEngine:
         return cls._instance
 
     def __init__(self, config: MusicGenConfig = None):
-        if hasattr(self, "_initialized"):
+        if hasattr(self, "_initialized") and self._initialized:
             return
 
         self.config = config or MusicGenConfig()
         self.device = self._resolve_device()
-        self.dtype = torch.float16 if self.device.type == "cuda" else torch.float32
-
-        log.info(f"[MusicGenEngine] Loading model: {self.config.model_name}")
-        self.processor = AutoProcessor.from_pretrained(self.config.model_name)
-        self.model = MusicgenForConditionalGeneration.from_pretrained(
-            self.config.model_name,
-            torch_dtype=self.dtype
-        ).to(self.device)
-        self.model.eval()
+        self.dtype = torch.float16 if self.device.type == "cuda" and self.config.quantization is None else torch.float32
+        
+        # Lazy loading: Defer model loading
+        self.processor = None
+        self.model = None
         self._initialized = True
+        log.info("[MusicGenEngine] Initialized for lazy loading.")
+
+    def _load_model_if_needed(self):
+        """Loads the model and processor into memory if they haven't been already."""
+        if self.model is not None and self.processor is not None:
+            return
+
+        with self._lock:
+            if self.model is None:
+                log.info(f"[MusicGenEngine] Lazily loading model: {self.config.model_name}")
+                
+                quantization_config: Dict[str, Any] = {}
+                if self.config.quantization == "8bit":
+                    quantization_config["load_in_8bit"] = True
+                    log.info("Applying 8-bit quantization.")
+                elif self.config.quantization == "4bit":
+                    quantization_config["load_in_4bit"] = True
+                    log.info("Applying 4-bit quantization.")
+
+                self.processor = AutoProcessor.from_pretrained(self.config.model_name)
+                self.model = MusicgenForConditionalGeneration.from_pretrained(
+                    self.config.model_name,
+                    torch_dtype=self.dtype,
+                    **quantization_config
+                ).to(self.device)
+                self.model.eval()
+                log.info("Model loaded successfully.")
 
     def _resolve_device(self) -> torch.device:
         if torch.cuda.is_available():
@@ -74,18 +99,17 @@ class MusicGenEngine:
         top_p: Optional[float] = None,
         max_new_tokens_override: Optional[int] = None,
     ) -> Tuple[torch.Tensor, int]:
+        
+        self._load_model_if_needed()
 
         if prompt_audio is not None:
             inputs = self._prepare_inputs_with_audio(prompt, prompt_audio, prompt_sr)
         else:
             inputs = self._prepare_inputs(prompt)
 
-        # Use override if provided, else use from config
         gen_temperature = temperature if temperature is not None else self.config.temperature
         gen_top_k = top_k if top_k is not None else self.config.top_k
         gen_top_p = top_p if top_p is not None else self.config.top_p
-
-        # Adjust max_new_tokens based on duration, allow override
         max_new_tokens = max_new_tokens_override if max_new_tokens_override is not None else int(duration * 50)
 
         with torch.no_grad():
@@ -97,8 +121,6 @@ class MusicGenEngine:
                 top_p=gen_top_p,
                 temperature=gen_temperature,
             )
-
-        # The output is on the same device as the model, which is what we want
         return audio_tensor, self.config.sample_rate
 
     def _prepare_inputs(self, prompt: str):
@@ -109,10 +131,7 @@ class MusicGenEngine:
         ).to(self.device)
 
     def _prepare_inputs_with_audio(self, prompt: str, prompt_audio: torch.Tensor, prompt_sr: int):
-        # 1. Ensure prompt audio is on CPU for the processor
         prompt_audio_cpu = prompt_audio.to("cpu")
-
-        # 2. Squeeze to 1D tensor if needed
         if prompt_audio_cpu.ndim > 1:
             prompt_audio_cpu = prompt_audio_cpu.squeeze(0)
 
@@ -123,13 +142,13 @@ class MusicGenEngine:
             return_tensors="pt",
             padding=True
         )
-
-        # 3. Correct dtype mismatch for ALL relevant tensors
+        
+        # For quantized models, we must use float32 for inputs, but the model itself is quantized.
+        # For full precision on GPU, we use float16.
         if self.dtype == torch.float16:
-            if 'input_features' in inputs: # Text prompt features
+            if 'input_features' in inputs:
                 inputs['input_features'] = inputs['input_features'].to(self.dtype)
-            if 'input_values' in inputs: # Audio prompt features
+            if 'input_values' in inputs:
                 inputs['input_values'] = inputs['input_values'].to(self.dtype)
 
-        # 4. Move all tensors to the target device (GPU)
         return inputs.to(self.device)
