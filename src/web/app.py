@@ -62,15 +62,6 @@ def create_ui():
                     with gr.TabItem("🎵 Track Definitions", id=0):
                         with gr.Group():
                             prompt_input = gr.Textbox(label="Style Prompt", placeholder="e.g., lofi, chill, synthwave, 80s", lines=3)
-                        
-                        with gr.Group():
-                            gr.Markdown("#### Music Structure")
-                            structure_input = gr.Textbox(
-                                label="Structure (JSON format)",
-                                value=json.dumps(SETTINGS["architect_settings"]["structure"], indent=4),
-                                lines=8,
-                                elem_id="json-input" 
-                            )
 
                         with gr.Row():
                             bpm_min_input = gr.Slider(label="Min BPM", minimum=SETTINGS["ui_settings"]["bpm_range"]["min"], maximum=SETTINGS["ui_settings"]["bpm_range"]["max"], value=SETTINGS["architect_settings"]["bpm_range"][0], step=SETTINGS["ui_settings"]["bpm_range"]["step"])
@@ -86,7 +77,17 @@ def create_ui():
                             key_input = gr.Dropdown(label="Key", choices=SETTINGS["ui_settings"]["keys"], value=SETTINGS["generator_settings"]["key"])
                             genre_input = gr.Dropdown(label="Genre", choices=SETTINGS["ui_settings"]["genres"], value=SETTINGS["ui_settings"]["genres"][0] if SETTINGS["ui_settings"]["genres"] else None)
                             mood_input = gr.Dropdown(label="Mood", choices=SETTINGS["ui_settings"]["moods"], value=SETTINGS["ui_settings"]["moods"][0] if SETTINGS["ui_settings"]["moods"] else None)
-                        instruments_input = gr.CheckboxGroup(label="Instruments", choices=SETTINGS["instruments"], value=SETTINGS["default_instruments"])
+                        
+                        with gr.Accordion("Music Structure", open=False):
+                            structure_input = gr.Textbox(
+                                label="Structure (JSON format)",
+                                value=json.dumps(SETTINGS["architect_settings"]["structure"], indent=4),
+                                lines=8,
+                                elem_id="json-input" 
+                            )
+                        
+                        with gr.Accordion("Instruments", open=False):
+                            instruments_input = gr.CheckboxGroup(label="Instruments", choices=SETTINGS["instruments"], value=SETTINGS["default_instruments"])
 
                     # --- Tab 2: Settings ---
                     with gr.TabItem("⚙️ Settings", id=1):
