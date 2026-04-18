@@ -1,11 +1,11 @@
 """
-Custom Gradio theme for Auralith to match a professional DAW's dark, industrial aesthetic.
+Custom Gradio theme for Auralume to match a professional DAW's dark, industrial aesthetic.
 """
 import gradio as gr
 from gradio.themes.base import Base
 from gradio.themes.utils import colors, fonts, sizes
 
-class AuralithTheme(Base):
+class AuralumeTheme(Base):
     def __init__(self):
         super().__init__(
             primary_hue=colors.blue,
@@ -15,7 +15,7 @@ class AuralithTheme(Base):
             radius_size=sizes.radius_md,
             font=fonts.GoogleFont("Inter"),
         )
-        self.name = "auralith_theme"
+        self.name = "auralume_theme"
         self.set(
             # Colors
             body_background_fill="*neutral_950",
@@ -59,7 +59,7 @@ class AuralithTheme(Base):
             input_placeholder_color_dark="*neutral_400",
         )
 
-auralith_theme = AuralithTheme()
+auralume_theme = AuralumeTheme()
 
 custom_css = """
 /* --- Global Input Text Color --- */

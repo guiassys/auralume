@@ -2,7 +2,7 @@
 
 Você é um engenheiro de software especialista em Python, IA generativa e pipelines com LangChain.
 
-Sua tarefa é refatorar um script Python já existente e funcional, localizado no diretório: C:\devtools\repo\auralith\src\scripts
+Sua tarefa é refatorar um script Python já existente e funcional, localizado no diretório: C:\devtools\repo\auralume\src\scripts
 
 Essa aplicação utiliza modelos da Hugging Face para gerar músicas. O objetivo é melhorar o desempenho e organizar o processo em um pipeline estruturado, sem quebrar a funcionalidade atual.
 

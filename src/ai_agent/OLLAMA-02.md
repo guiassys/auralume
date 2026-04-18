@@ -2,7 +2,7 @@
 
 Você é um engenheiro de software especialista em Python, IA generativa, pipelines com LangChain e desenvolvimento de interfaces Web com Gradio.
 
-Sua tarefa é refatorar uma aplicação Python já existente e funcional, localizada no diretório: C:\devtools\repo\auralith\src\scripts
+Sua tarefa é refatorar uma aplicação Python já existente e funcional, localizada no diretório: C:\devtools\repo\auralume\src\scripts
 
 Essa aplicação utiliza modelos da Hugging Face e LangChain para gerar músicas. O objetivo é adicionar uma interface Web utilizando Gradio, sem quebrar a funcionalidade atual e mantendo compatibilidade total com o pipeline existente.
 
@@ -48,7 +48,7 @@ O pipeline deve continuar aceitando exatamente:
 ## REQUISITOS FUNCIONAIS
 
 ### Layout
-- Header com título: **Auralith Web**
+- Header com título: **Auralume Web**
 
 ### Formulário
 - Campo: Nome da música (texto)

@@ -1,8 +1,8 @@
-# Prompt: Evolução Auralith - Base de Conhecimento por Referência de Áudio
+# Prompt: Evolução Auralume - Base de Conhecimento por Referência de Áudio
 
 Você é um Engenheiro de Software Sênior especialista em IA Generativa, Áudio Digital e LangChain.
 
-Sua missão é evoluir o projeto **Auralith** para incorporar uma **Base de Conhecimento de Áudio (Audio-RAG)**, permitindo que o sistema utilize arquivos de referência sonora fornecidos pelo usuário para guiar a identidade musical das composições geradas.
+Sua missão é evoluir o projeto **Auralume** para incorporar uma **Base de Conhecimento de Áudio (Audio-RAG)**, permitindo que o sistema utilize arquivos de referência sonora fornecidos pelo usuário para guiar a identidade musical das composições geradas.
 
 ---
 

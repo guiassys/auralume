@@ -1,4 +1,4 @@
-"""Script alternativo para executar a interface Web do Auralith de qualquer diretório."""
+"""Script alternativo para executar a interface Web do Auralume de qualquer diretório."""
 
 import sys
 import os
@@ -14,7 +14,7 @@ def main():
 
     # Verifica se estamos no diretório correto procurando por 'src'
     if not os.path.exists(os.path.join(project_root, 'src')):
-        print("❌ Erro: Execute este script a partir do diretório raiz do projeto (auralith/)")
+        print("❌ Erro: Execute este script a partir do diretório raiz do projeto (auralume/)")
         print("📁 Diretório atual:", project_root)
         return
 
@@ -23,7 +23,7 @@ def main():
 
     try:
         from src.web.app import interface
-        print("🚀 Iniciando Auralith Web...")
+        print("🚀 Iniciando Auralume Web...")
         print("📱 Acesse: http://localhost:7860")
         print("❌ Pressione Ctrl+C para parar")
 
