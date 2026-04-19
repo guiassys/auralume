@@ -1,61 +1,36 @@
 > Este prompt herda todas as diretrizes e restrições do template principal: `@/docs/ai_agent/OLLAMA.md`.
 
-# 🚀 Refatoração da Interface de Usuário e Correção de Erros de Inicialização
+# 🚀 Otimização da Experiência do Usuário e Identidade Visual da Plataforma
 
 ## 🌍 Contexto
 
 - **Aplicação Alvo**: Plataforma de geração de música Auralume.
-- **Problema Técnico**: A aplicação está falhando ao iniciar devido a dois problemas de compatibilidade com a versão do Gradio utilizada:
-    1.  O argumento `vertical_align` não é suportado no construtor `gr.Row`.
-    2.  Os parâmetros `theme` e `css` estão sendo passados para `gr.Blocks` em vez do método `launch()`, o que gera um `UserWarning`.
-- **Problema de Experiência do Usuário**: O feedback de progresso da geração é uma barra grande e mal posicionada, e a área de download aparece de forma confusa no fluxo do usuário.
+- **Problema de Negócio**: A interface atual da plataforma carece de uma identidade visual profissional e apresenta uma usabilidade confusa. Elementos cruciais estão mal posicionados, o feedback de progresso é intrusivo e a aparência genérica não inspira confiança ou criatividade, o que pode afastar usuários que esperam uma experiência similar à de um software de produção musical (DAW).
+- **Necessidade Estratégica**: Para posicionar a Auralume como uma ferramenta séria e intuitiva no mercado, é essencial refinar a experiência do usuário (UX) e implementar uma identidade visual (UI) coesa e profissional, que remeta ao universo da produção musical.
 
 ## 🎯 Objetivo Principal
 
-Corrigir os erros de inicialização da aplicação e refatorar a interface para melhorar a usabilidade, implementando as seguintes melhorias:
+Transformar a interface da Auralume em uma experiência de usuário mais profissional, intuitiva e esteticamente alinhada a um software de áudio, com foco em três pilares:
 
-1.  **Correção de Erros Gradio**:
-    - Mover os parâmetros `theme` e `css` do construtor `gr.Blocks()` para o método `interface.launch()`.
-    - Remover o argumento `vertical_align` do construtor `gr.Row` e implementar o alinhamento vertical via CSS para garantir a compatibilidade.
+1.  **Implementar uma Identidade Visual Profissional**:
+    - **Diretriz**: A interface deve abandonar o tema padrão e adotar uma paleta de cores escura (dark theme), inspirada em DAWs populares. O design deve ser limpo, com bom contraste e uma aparência que transmita profissionalismo e foco na criatividade.
+    - **Impacto Esperado**: Aumentar a percepção de valor da ferramenta e criar um ambiente mais imersivo para o usuário.
 
-2.  **Indicador de Progresso Otimizado**:
-    - **Substituição**: Substituir a barra de progresso (`gr.Slider`) por um indicador de texto não interativo.
-    - **Visual**: O indicador deve exibir um ícone de carregamento (ex: `🔄`) seguido pela porcentagem de progresso. O componente não deve ter bordas e sua altura deve ser a mesma de um botão padrão.
-    - **Posicionamento**: O indicador de progresso deve ficar na **mesma linha** que o seletor "Pipeline Type", posicionado à direita.
+2.  **Otimizar o Fluxo de Geração de Música**:
+    - **Feedback de Progresso**: O indicador de progresso da geração deve ser sutil e informativo, mostrando um ícone de atividade e a porcentagem, sem poluir a tela. Ele deve estar logicamente associado aos controles que iniciam a tarefa.
+    - **Organização Lógica**: A área de download dos arquivos gerados deve aparecer somente após a conclusão do processo e estar localizada em uma área de "finalização", como o menu lateral de ações, abaixo do botão "Gerar".
+    - **Clareza na Ação**: Ao iniciar uma nova geração, a interface deve ser limpa automaticamente, removendo os resultados da geração anterior para evitar qualquer ambiguidade.
 
-3.  **Otimizar Layout do Menu Lateral**: Reposicionar o container "Download Files" para baixo do botão "Generate".
-
-4.  **Garantir um Estado Limpo para Nova Geração**: Implementar uma lógica para que, ao iniciar uma nova geração, os resultados anteriores ("Download files" e "Master preview") sejam automaticamente ocultados.
-
----
-
-## 🚀 Plano de Implementação
-
-### Fase 1: Correção de Erros e Reorganização da UI
-
-1.  **Análise de Código**: Identificar os arquivos `app.py` e `ui_theme.py`.
-2.  **Corrigir Inicialização do Gradio (em `app.py`)**:
-    - Na linha `with gr.Blocks(...)`, remover os argumentos `theme=auralume_theme` and `css=custom_css`.
-    - Na chamada `interface.launch(...)`, adicionar os argumentos `theme=auralume_theme` e `css=custom_css`.
-    - Na linha `with gr.Row(elem_id="pipeline-container", ...)` remover o argumento `vertical_align="center"`.
-3.  **Ajustar Layout e Estilos**:
-    - Em `app.py`, confirmar que um `gr.Row` contém o `pipeline_type_input` e o `progress_indicator`.
-    - Em `ui_theme.py`, adicionar CSS à classe `#pipeline-container` para garantir o alinhamento vertical dos itens (ex: `align-items: center;`).
-    - Garantir que a classe CSS para o indicador de progresso (`.progress-indicator`) remove a borda e o fundo e ajusta a altura e o alinhamento do texto.
-4.  **Mover Container de Download**: Em `app.py`, mover a definição dos componentes `file_output` e `audio_preview` para o menu lateral, abaixo do `generate_btn`.
-
-### Fase 2: Aprimoramento do Fluxo de Interação
-
-1.  **Atualizar Lógica de Progresso**: Em `app.py`, modificar a função `_ui_update_progress` para formatar o status como uma string (ex: "🔄 Rendering... 42%") e passá-la para o `progress_indicator`.
-2.  **Implementar Limpeza Automática**: Estender o evento de clique do `generate_btn` para que ele oculte e limpe os componentes `file_output` e `audio_preview` no início da geração.
+3.  **Garantir a Estabilidade da Aplicação**:
+    - **Correção de Erros**: A aplicação deve iniciar de forma estável, sem erros ou alertas de compatibilidade relacionados à biblioteca de interface.
 
 ---
 
 ## 🎯 Definição de Concluído
 
-- A aplicação inicia sem nenhum erro ou `UserWarning`.
-- O indicador de progresso é um campo de texto sem borda, com a altura de um botão, posicionado à direita do seletor "Pipeline Type".
-- O indicador exibe um ícone de carregamento e a porcentagem de progresso durante a execução.
-- O container "Download Files" está posicionado abaixo do botão "Generate".
-- Clicar em "Generate" oculta imediatamente os resultados da geração anterior.
-- Todas as diretrizes do arquivo `@/docs/ai_agent/OLLAMA.md` foram seguidas.
+- A aplicação apresenta uma nova identidade visual com um tema escuro, profissional e coeso, inspirado em softwares de produção musical.
+- O indicador de progresso é discreto, exibe um ícone e a porcentagem, e está localizado de forma visível mas não intrusiva na área de controle da geração.
+- A seção de download de arquivos só se torna visível após a conclusão da geração e está posicionada logicamente no menu de ações.
+- Iniciar uma nova geração limpa automaticamente os resultados da geração anterior.
+- A aplicação inicia e opera de forma estável, sem erros de interface.
+- Todas as diretrizes de alto nível definidas em `@/docs/ai_agent/OLLAMA.md` foram respeitadas.

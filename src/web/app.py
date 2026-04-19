@@ -14,7 +14,7 @@ from typing import Dict, Any, Tuple, Optional, List
 
 from src.services.music_service import MusicGenerationService
 from src.web.log_stream import LogStream
-from src.web.ui_theme import custom_css
+from src.web.ui_theme import auralume_theme, custom_css
 
 # --- Logging Configuration ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -59,7 +59,7 @@ except RuntimeError as e:
 # --- UI DEFINITION ---
 def create_ui():
     """Builds the Gradio Blocks UI for Auralume."""
-    with gr.Blocks(title="Auralume") as demo:
+    with gr.Blocks(title="Auralume", theme=auralume_theme, css=custom_css) as demo:
         # --- Header ---
         with gr.Row(elem_classes=["header"]):
             gr.Markdown("## 🎹 Auralume", elem_id="logo")
@@ -71,14 +71,6 @@ def create_ui():
                 value="Simple",
                 elem_id="pipeline-selector",
                 scale=3
-            )
-            progress_indicator = gr.Textbox(
-                value="",
-                interactive=False,
-                elem_classes=["progress-indicator", "compact"],
-                visible=False,
-                scale=1,
-                show_label=False
             )
 
         with gr.Row():
@@ -112,7 +104,7 @@ def create_ui():
 
                         with gr.Accordion("Music Structure", open=False, visible=False) as advanced_accordion_1:
                             structure_input = gr.Textbox(
-                                label="JSON format",
+                                label="Structure (JSON format)",
                                 value=json.dumps(SETTINGS["architect_settings"]["structure"], indent=4),
                                 lines=8,
                                 elem_id="json-input",
@@ -166,9 +158,18 @@ def create_ui():
                 with gr.Column():
                     clear_btn = gr.Button("🗑️ Clear Inputs")
                     generate_btn = gr.Button("🚀 GENERATE", variant="primary")
+                    progress_indicator = gr.Textbox(
+                        value="",
+                        interactive=False,
+                        elem_classes=["progress-indicator", "compact"],
+                        visible=False,
+                        show_label=False
+                    )
 
-                file_output = gr.File(label="Download Files", visible=False)
-                audio_preview = gr.Audio(label="Master Preview", type="filepath", visible=False)
+                with gr.Column(visible=False) as downloads_group:
+                    gr.Markdown("### 📂 Downloads")
+                    file_output = gr.File(label="Download Files", visible=False)
+                    audio_preview = gr.Audio(label="Master Preview", type="filepath", visible=False)
 
         # --- UI Interaction Logic ---
         def toggle_pipeline_view(pipeline_type: str):
@@ -230,8 +231,9 @@ def create_ui():
                 generate_btn: gr.update(interactive=False, value="Generating..."),
                 clear_btn: gr.update(interactive=False),
                 progress_indicator: gr.update(value="🔄 Rendering... 0%", visible=True),
-                file_output: gr.update(visible=False, value=None),
-                audio_preview: gr.update(visible=False, value=None)
+                downloads_group: gr.update(visible=False),
+                file_output: gr.update(value=None, visible=False),
+                audio_preview: gr.update(value=None, visible=False)
             }
 
         def _ui_update_progress(log_history: List[str], current_step: int, total_steps: int):
@@ -246,6 +248,7 @@ def create_ui():
             log_history.append(f"✅ Generation successful! Output files: {result['files']}")
             return {
                 status_output: "\n".join(log_history),
+                downloads_group: gr.update(visible=True),
                 file_output: gr.update(value=result["files"], visible=True),
                 audio_preview: gr.update(value=result["files"][0], visible=True),
                 generate_btn: gr.update(interactive=True, value="🚀 GENERATE"),
@@ -333,7 +336,7 @@ def create_ui():
         ]
 
         all_outputs = [
-            tabs, status_output, generate_btn, clear_btn, progress_indicator, file_output, audio_preview
+            tabs, status_output, generate_btn, clear_btn, progress_indicator, downloads_group, file_output, audio_preview
         ]
 
         generate_btn.click(fn=run_generation, inputs=all_inputs, outputs=all_outputs)
@@ -363,8 +366,9 @@ def create_ui():
                 fade_in_input: SETTINGS["generator_settings"]["fade_in_duration"],
                 fade_out_input: SETTINGS["generator_settings"]["fade_out_duration"],
                 status_output: "",
-                file_output: gr.update(visible=False),
-                audio_preview: gr.update(visible=False),
+                downloads_group: gr.update(visible=False),
+                file_output: gr.update(value=None, visible=False),
+                audio_preview: gr.update(value=None, visible=False),
                 progress_indicator: gr.update(value="", visible=False),
             }
 
@@ -374,7 +378,7 @@ def create_ui():
             output_dir_input, output_sufix_input, audio_format_input, generate_midi_input,
             temperature_input, model_size_input, quantization_input, max_new_tokens_input,
             chunk_duration_input, continuation_primer_input, fade_in_input, fade_out_input,
-            status_output, file_output, audio_preview, progress_indicator
+            status_output, downloads_group, file_output, audio_preview, progress_indicator
         ]
         clear_btn.click(fn=clear_form, outputs=clear_outputs)
 
@@ -394,7 +398,5 @@ if __name__ == "__main__":
         server_name=server_settings.get("server_name", "127.0.0.1"),
         server_port=server_settings.get("server_port", 7860),
         show_error=server_settings.get("show_error", True),
-        allowed_paths=[allowed_path],
-        theme="gradio/green",
-        css=custom_css
+        allowed_paths=[allowed_path]
     )
