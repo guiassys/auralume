@@ -80,14 +80,30 @@ custom_css = """
     color: #ffffff;
     font-weight: bold;
 }
-/* Correctly target the slider's track fill for the progress bar effect */
-.glowing-progress .track-fill {
-    background-color: #00ff41 !important; /* Neon Green */
-    box-shadow: 0 0 5px #00ff41, 0 0 10px #00ff41;
+
+/* --- Pipeline Container Alignment --- */
+#pipeline-container {
+    align-items: center !important;
 }
 
 /* Remove background from instrument checkboxes */
 .gradio-container .gr-checkboxgroup .gr-checkbox-label {
     background-color: transparent !important;
+}
+
+/* --- Compact Progress Indicator --- */
+.gradio-container .compact {
+    min-height: 0 !important;
+    height: var(--size-8) !important; /* Match button height */
+    padding: 0 !important;
+}
+
+.gradio-container .progress-indicator textarea {
+    border: none !important;
+    background-color: transparent !important;
+    text-align: left !important;
+    padding: 0 !important;
+    line-height: var(--size-8) !important; /* Vertically center text */
+    color: var(--body-text-color) !important;
 }
 """
