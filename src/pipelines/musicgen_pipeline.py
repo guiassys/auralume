@@ -128,6 +128,9 @@ class MusicComposer:
         sr = self.engine.config.sample_rate
         use_continuation = inputs.get("use_continuation", True)
         primer_duration_s = inputs.get("continuation_primer_s", 5) # 5 seconds gives strong rhythmic context
+        
+        user_prompt_audio = inputs.get("prompt_audio")
+        user_prompt_sr = inputs.get("prompt_sr")
 
         num_sections = len(inputs["structure"])
         for i, section in enumerate(inputs["structure"]):
@@ -143,7 +146,15 @@ class MusicComposer:
             prompt_audio, prompt_sr = None, None
             primer_samples = 0
             
-            if use_continuation and full_audio is not None:
+            # For the first chunk, use the user's reference audio if provided.
+            if i == 0 and user_prompt_audio is not None:
+                prompt_audio = user_prompt_audio
+                prompt_sr = user_prompt_sr
+                self._log("Using user reference audio for initial context.")
+            # For subsequent chunks, use the stitched generated audio as continuation
+            # This counts as `prompt_audio` iterative conditional generation.
+            # In order to support `use_cache=False` securely down the line and not crash GPU
+            elif use_continuation and full_audio is not None:
                 primer_samples = int(primer_duration_s * sr)
                 if full_audio.shape[1] > primer_samples:
                     prompt_audio = full_audio[:, -primer_samples:]

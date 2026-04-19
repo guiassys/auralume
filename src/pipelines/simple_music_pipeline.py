@@ -30,14 +30,22 @@ class SimpleMusicPipeline:
 
         duration = 30  # Fixed duration for simple mode
         temperature = kwargs.get("temperature", 0.9)
+        
+        prompt_audio = kwargs.get("prompt_audio")
+        prompt_sr = kwargs.get("prompt_sr")
 
         self._log(f"Using user prompt: '{final_prompt}'")
+        if prompt_audio is not None:
+            self._log("Using reference audio.")
+            
         self._log(f"Duration: {duration}s")
         self._log("Generating step 1/1...")
 
         audio_tensor, sr = self.engine.generate(
             prompt=final_prompt,
             duration=duration,
+            prompt_audio=prompt_audio,
+            prompt_sr=prompt_sr,
             temperature=temperature,
         )
 
