@@ -1,148 +1,50 @@
-# 🚀 Prompt: Auralume Evolution — High-Fidelity Soundtrack Generation Overhaul
+> Este prompt herda todas as diretrizes e restrições do template principal: `@/docs/ai_agent/OLLAMA.md`.
 
-## 🧠 Persona
-You are **Maestro**, a world-class AI Software Architect specializing in generative audio systems. Your expertise lies in transforming fragmented proof-of-concepts into robust, production-grade pipelines. You are meticulous, deeply technical, and prioritize architectural integrity and audio quality above all else. You communicate with the precision of an engineer and the clarity of a seasoned mentor.
+# 🚀 Reformulação do Backend para Geração de Trilhas Sonoras de Alta Fidelidade
 
-You will act as a:
-- **System Architect:** Designing a new, coherent generation pipeline.
-- **Audio ML Engineer:** Applying advanced techniques for model conditioning and audio processing.
-- **Pragmatic Code Reviewer:** Identifying specific flaws and proposing production-ready solutions.
+## 🌍 Contexto
 
----
+- **Aplicação Alvo**: O backend de geração de música (`MusicGenEngine`, `LofiGenerator`, etc.).
+- **Problema**: A qualidade do áudio gerado é baixa. As faixas são fragmentadas, não possuem uma estrutura musical discernível (intro, meio, fim), as transições entre segmentos são abruptas e o resultado final frequentemente ignora o prompt do usuário.
+- **Necessidade**: Arquitetar e implementar um novo pipeline de geração no backend que produza faixas musicalmente estruturadas, coesas e de alta fidelidade, comparáveis a uma stream de música lofi profissional.
 
-## 🌍 Context
-The Auralume system generates music using Meta's MusicGen but suffers from critical quality issues. The output is fragmented, lacks musical structure, and fails to respect user prompts, resulting in an unnatural and disjointed listening experience.
+## 🎯 Objetivo Principal
 
-### ❌ Current Problems
-- **Structural Absence:** No discernible intro, middle, or end.
-- **Poor Transitions:** Abrupt, jarring cuts between generated segments.
-- **Harmonic Dissonance:** Lack of musical coherence and key consistency.
-- **Prompt Ignorance:** The generated output often deviates significantly from the user's text prompt.
-- **Abrupt Endings:** Music stops suddenly, often mid-chord, without resolution or fade-out.
+Redesenhar o pipeline de geração de áudio para resolver os problemas de coesão, estrutura e aderência ao prompt. O foco é criar uma experiência auditiva contínua e agradável, implementando técnicas avançadas de condicionamento de modelo, costura de áudio (stitching) e pós-processamento. **Nenhuma alteração deve ser feita na interface do usuário (Gradio)**.
 
 ---
 
-## 🎯 Primary Objective
-Your mission is to **architect and implement a new backend generation pipeline** that produces high-fidelity, continuous, and musically structured tracks. The final output should be comparable in quality to a professional, human-curated lofi music stream.
+## 🚀 Plano de Implementação
+
+1.  **Análise de Causa Raiz e Proposta de Arquitetura (Primeira Etapa)**:
+    - Conforme o mandato de execução, a primeira ação será analisar os arquivos (`music_service.py`, `generator.py`, `musicgen_engine.py`, `musicgen_pipeline.py`) para identificar as falhas arquitetônicas que causam a baixa qualidade do áudio.
+    - Com base na análise, será proposta uma nova arquitetura de pipeline que resolva os problemas identificados.
+
+2.  **Implementação da Geração Estruturada e Coesa**:
+    - **Estrutura Musical**: O novo pipeline irá gerar a música em seções claras: `Intro -> Desenvolvimento -> Outro`.
+    - **Costura Contínua (Stitching)**: Para eliminar cortes abruptos, a geração será baseada em "chunks" (segmentos) com sobreposição.
+        - **Overlap & Crossfade**: Gerar segmentos de áudio que se sobrepõem (ex: 1-2 segundos) e aplicar um `crossfade` (ex: `constant power`) para criar uma transição musicalmente imperceptível.
+        - **Continuidade Harmônica**: Garantir que a tonalidade, o BPM e o humor sejam consistentes entre as transições.
+    - **Finalização Suave**: Implementar uma resolução musical na seção "Outro" e um `fade-out` no nível de DSP para evitar finais abruptos.
+
+3.  **Melhoria na Aderência ao Prompt**:
+    - **Engenharia de Prompt**: Desenvolver uma etapa que enriquece o prompt simples do usuário em uma entrada de condicionamento detalhada para o MusicGen. (Ex: `"lofi"` -> `"A calm, instrumental lofi track, 90 bpm, C minor key."`).
+    - **Condicionamento Consistente**: Assegurar que todas as seções da música sejam geradas a partir deste prompt enriquecido e consistente.
+
+4.  **Pipeline de Pós-Processamento**:
+    - Adicionar uma etapa final de processamento de áudio para polir a faixa, incluindo `fade-in/fade-out`, corte de silêncio e, opcionalmente, normalização de volume (LUFS).
+
+5.  **Correção de Armadilhas Técnicas (Audio Conditioning)**:
+    - Garantir o tratamento correto dos tensores de áudio, incluindo a forma (`.squeeze(0)`), o tipo de dado (`.to(model.dtype)`) e o dispositivo (`.to(device)`) antes de passá-los para o modelo MusicGen, evitando erros comuns de incompatibilidade.
+
+👉 **Mandato de Execução**: Conforme o template principal, sua primeira resposta DEVE ser a **Análise de Causa Raiz** e a **Proposta de Arquitetura**. Aguarde a confirmação antes de prosseguir com a implementação completa.
 
 ---
 
-## ⚙️ Existing Stack
-- **UI:** Gradio `(DO NOT MODIFY)`
-- **Model:** Meta MusicGen (via Hugging Face Transformers)
-- **Orchestration:** LangChain Expression Language (LCEL)
-- **Core Components:** `MusicGenEngine`, `MusicGenerationService`, `LofiGenerator`
+## 🎯 Definição de Concluído
 
----
-
-## ⚠️ Hard Constraints
-
-### ✅ Must Preserve
-- **GPU Acceleration:** All operations must remain on the GPU.
-- **UI Integrity:** No changes to the Gradio frontend interface.
-- **Logging & Observability:** Maintain existing logging to the terminal and UI.
-- **API Contracts:** The interface between the frontend and backend must not be broken.
-- **Existing Features:** All current functionalities must be retained.
-
-### ❌ Forbidden
-- **UI Modifications:** Do not alter any part of the user interface.
-- **Feature Removal:** Do not deprecate or remove any existing features.
-- **Introducing New Major Dependencies:** Do not add new libraries (e.g., PyTorch, TensorFlow) without explicit justification and approval.
-
----
-
-## 💡 Key Technical Directives (Prioritized)
-
-You MUST address the following areas in order of importance:
-
-### 1. 🎵 End-to-End Audio Cohesion (Highest Priority)
-This is the core problem. Your design must solve this.
-- **Structural Generation:** Implement a clear `Intro -> Development -> Outro` structure.
-- **Seamless Stitching:** If using a chunk-based approach, ensure segments are musically connected. This requires:
-    - **Overlap & Crossfade:** Generate overlapping audio chunks and apply a crossfade (e.g., constant power crossfade) to create a seamless transition.
-    - **Harmonic Continuity:** Ensure the key, tempo, and mood are consistent across transitions.
-- **Graceful Termination:** Implement a musical resolution and a DSP-level fade-out.
-
-### 2. 🎚️ Prompt Adherence and Conditioning
-The model must respect the user's intent.
-- **Prompt Engineering:** Enrich simple user prompts into detailed, structured conditioning inputs for MusicGen.
-    - *Example:* `User: "lofi hip hop"` -> `Enriched: "A calm, instrumental lofi hip hop track with a slow, steady beat, vinyl crackle, and a melancholic piano melody, 90 bpm, C minor key."`
-- **Consistent Conditioning:** Ensure all generated segments (intro, middle, outro) are conditioned on a consistent, derived prompt.
-
-### 3. 🧩 Robust Post-Processing Pipeline
-Add a final audio processing stage to polish the output.
-- **Essential:** Fade-in/fade-out, silence trimming, and smooth waveform stitching.
-- **Optional (but recommended):** Volume normalization (LUFS) and light compression to even out dynamics.
-
-### 4. 🧠 Context & Memory Management
-Maintain musical memory across the entire generation process.
-- **Latent Space Continuity:** If possible, maintain and evolve the model's latent state between chunks to avoid drastic stylistic shifts.
-- **Motif Reuse:** Explore techniques to re-introduce musical motifs or themes throughout the track.
-
----
-
-## 🚨 Technical Pitfalls to Avoid (CRITICAL)
-
-Based on previous failures, you MUST pay close attention to the following details when implementing audio conditioning:
-
-### 1. Audio Tensor Shape for `prompt_audio`
-- The Hugging Face `processor` for MusicGen expects the `audio` prompt to be a **1D tensor** of shape `(samples,)`.
-- Our internal audio format is a 2D tensor of shape `(channels, samples)`.
-- **Action:** You MUST use `.squeeze(0)` to remove the channel dimension before passing the audio to the `processor`.
-
-### 2. Data Type Mismatch (`float32` vs. `float16`)
-- The MusicGen model runs in `float16` (Half precision) on the GPU for performance.
-- The `processor`, by design, internally converts audio to `float32` (Full precision), creating a mismatch.
-- **Action:** After the `processor` returns its dictionary of inputs, you MUST access the `input_features` tensor and explicitly convert it back to the model's data type (`model.dtype` or `torch.float16`) before passing it to the `model.generate()` function.
-
-### 3. Device Mismatch (CPU vs. GPU)
-- The `processor` requires the input audio to be on the **CPU** to perform its internal NumPy conversions.
-- The `model` requires all inputs to be on the **GPU** (`cuda:0`).
-- **Action:** Ensure the audio prompt is on the CPU when passed to the `processor`. The final dictionary of inputs returned by the `processor` should then be moved to the GPU (`.to(device)`) before being passed to the model.
-
----
-
-## 🚀 Implementation Plan
-
-### Step 1 — Root Cause Analysis (Mandatory First Step)
-- **Analyze:** Review `music_service.py`, `generator.py`, `musicgen_engine.py`, and `musicgen_pipeline.py`.
-- **Identify:** Pinpoint the exact code patterns or architectural flaws causing the problems (e.g., "The pipeline generates independent chunks in a simple loop without passing any context, causing abrupt transitions.").
-
-### Step 2 — Architectural Proposal
-- **Diagram:** Propose a new generation pipeline using a sequence diagram or data flow chart.
-- **Lifecycle:** Describe the new generation lifecycle, from prompt ingestion to final audio output.
-- **Audio Strategy:** Define chunk duration, overlap size (e.g., 1-2 seconds), and the specific crossfade method.
-
-### Step 3 — Refactor Plan
-- **Specify:** List the exact files and functions to be modified, created, or deleted.
-- **Compatibility:** Explain how you will maintain backward compatibility with the existing API.
-
-### Step 4 — Implementation
-- **Code:** Provide clean, documented, production-ready Python code that implements the new architecture.
-- **Logging:** Integrate detailed logging that explains each step of the new pipeline (e.g., "Generating intro chunk," "Applying crossfade," "Starting fade-out").
-
-### Step 5 — Validation Strategy
-- **Define:** Describe how you will verify the improvements.
-    - *Example:* "To validate smooth transitions, I will inspect the waveform at chunk boundaries and confirm the absence of discontinuities. To validate prompt adherence, I will generate 5 tracks with diverse prompts and confirm the output matches the requested genre and mood."
-
----
-
-## 🛑 Execution Mandate
-
-👉 **DO NOT GENERATE CODE IMMEDIATELY.**
-
-Your first response MUST be the **Root Cause Analysis** and the **Architectural Proposal**. You must stop and wait for confirmation before proceeding.
-
-**Your response must follow this exact sequence:**
-1.  **Analysis:** "Here is my analysis of the existing codebase and the root causes of the quality issues."
-2.  **Proposal:** "Based on the analysis, I propose the following new architecture..."
-3.  **Confirmation:** Stop and ask: **"Do you approve this plan? Shall I proceed with the full implementation?"**
-
----
-
-## 🎯 Definition of Done
-The project is complete when Auralume can generate a 2-3 minute track that is:
-- **Cohesive:** Sounds like a single, intentional piece of music.
-- **Continuous:** Has no audible clicks, pops, or abrupt changes.
-- **Structurally Sound:** Features a clear beginning, middle, and end.
-- **Prompt-Adherent:** Accurately reflects the user's requested genre, mood, and instrumentation.
+- O sistema gera uma faixa de 2-3 minutos que soa como uma peça musical única e intencional.
+- Não há cliques, estalos ou mudanças abruptas audíveis entre as seções.
+- A música possui uma estrutura clara de início, meio e fim.
+- O resultado sonoro reflete com precisão o gênero, humor e instrumentação solicitados pelo usuário.
+- Todas as alterações foram feitas no backend, sem impactar a UI ou as APIs existentes.

@@ -1,104 +1,44 @@
-# 🚀 Prompt: Add Audio Format Selection and MIDI File Generation
+> Este prompt herda todas as diretrizes e restrições do template principal: `@/docs/ai_agent/OLLAMA.md`.
 
-## 🧠 Persona
+# 🚀 Adição de Seleção de Formato de Áudio e Geração de MIDI
 
-You are an expert AI audio engineer specialized in generative music pipelines, audio formats, and MIDI integration.
+## 🌍 Contexto
 
-You will act as a:
-Senior Generative AI Engineer focused on extending an existing music generation pipeline with new output options, ensuring backward compatibility and high-quality results.
+- **Aplicação Alvo**: O sistema de geração de música existente, que atualmente produz apenas arquivos no formato `.wav`.
+- **Necessidade**: Oferecer aos usuários mais flexibilidade no formato de saída, permitindo a escolha entre `.wav` e `.mp3`, e opcionalmente gerar um arquivo `.mid` para edição posterior em uma Digital Audio Workstation (DAW).
+- **Requisito**: A integração deve ser incremental, sem interromper o fluxo de trabalho atual.
 
----
+## 🎯 Objetivo Principal
 
-## 🌍 Context
-
-We have a system that generates music in `.wav` format using AI. We want to add a new feature to provide users with more flexibility in the output format and to allow for further editing in Digital Audio Workstations (DAWs).
-
-The new feature should be integrated with minimal disruption to the existing, functional system.
+Estender o sistema de geração de música para permitir que os usuários selecionem o formato de áudio de saída e optem pela geração de um arquivo MIDI. As novas funcionalidades devem ser integradas à interface do usuário e implementadas no backend, mantendo o comportamento padrão do sistema inalterado se nenhuma nova opção for selecionada.
 
 ---
 
-## 🎯 Primary Objective
+## 🚀 Plano de Implementação
 
-Extend the current music generation system to allow users to select the audio output format and optionally generate a MIDI file.
+1.  **Alterações na Interface (Frontend)**:
+    - Adicionar um grupo de botões de rádio ou um dropdown para a seleção do formato de áudio.
+        - **Opções**: `.wav`, `.mp3`.
+        - **Padrão**: `.wav`.
+    - Adicionar uma caixa de seleção (checkbox) para a geração de arquivo MIDI.
+        - **Rótulo**: "Gerar arquivo MIDI".
+        - **Padrão**: Desmarcado (Não).
 
-The new features must be:
-- Integrated into the frontend with new UI elements.
-- Implemented with default values to maintain the current behavior.
-- Robust and without breaking the existing functionality.
+2.  **Adaptação da Camada de Serviço (Backend)**:
+    - Modificar a camada de serviço para aceitar os novos parâmetros da interface (ex: `audio_format`, `generate_midi`).
+    - **Lógica de Formato de Áudio**:
+        - Se `audio_format` for `.mp3`, o sistema deve primeiro gerar o arquivo `.wav` como de costume e, em seguida, convertê-lo para `.mp3` usando uma biblioteca como `pydub`. O arquivo final disponibilizado para download será o `.mp3`.
+    - **Lógica de Geração de MIDI**:
+        - Se `generate_midi` for `true`, o sistema deve invocar um novo módulo responsável por analisar a melodia ou os acordes da música gerada e criar um arquivo `.mid` correspondente. Este arquivo deve ser salvo junto com o arquivo de áudio.
 
----
-
-## ⚙️ Existing Stack
-
-- AI-based music generation model
-- Python-based backend
-- Frontend with UI elements for music generation
-- Current output format: `.wav`
-
----
-
-## ⚠️ Hard Constraints
-
-### ✅ Must Preserve
-
-- The existing functionality of generating `.wav` files.
-- The current workflow if no new options are selected.
-- The quality of the generated audio.
-
-### ❌ Forbidden
-
-- Breaking the existing music generation process.
-- Making the new options the default.
-- Degrading the performance of the system.
+👉 **Mandato de Execução**: Conforme o template principal, sua primeira resposta deve ser a **Proposta de Arquitetura**, detalhando como os novos parâmetros serão passados do frontend para o backend e como a lógica de conversão para `.mp3` e a geração de MIDI serão implementadas e integradas ao serviço existente. Aguarde a confirmação antes de gerar o código.
 
 ---
 
-## 💡 Key Technical Directives (Prioritized)
+## 🎯 Definição de Concluído
 
-1.  **Frontend Changes**:
-    -   Add a checkbox/radio button group for selecting the desired audio format.
-        -   Options: `.wav`, `.mp3`.
-        -   Default value: `.wav`.
-    -   Add a checkbox/radio button group for opting in to MIDI file generation.
-        -   Options: `Yes`, `No`.
-        -   Default value: `No`.
-
-2.  **Backend Changes**:
-    -   If the user selects `.mp3`, the system should convert the generated `.wav` file to `.mp3` format.
-    -   If the user selects `Yes` for MIDI file generation, the system should generate and save a `.mid` file corresponding to the generated music.
-    -   The system should handle the new parameters from the frontend to control these features.
-
----
-
-## 🚀 Implementation Plan
-
-1.  **Frontend**:
-    -   Add the new UI elements (checkboxes/radio buttons) to the user interface.
-    -   Ensure the default values are set as specified (`.wav` and `No`).
-    -   Pass the selected values to the backend when the music generation is triggered.
-
-2.  **Backend**:
-    -   Modify the API endpoint to accept the new parameters (e.g., `format`, `generate_midi`).
-    -   Implement the logic to handle the `.mp3` conversion if `format` is `.mp3`.
-    -   Implement the logic to generate the `.mid` file if `generate_midi` is `true`.
-    -   Ensure the file naming and storage are handled correctly for the new files.
-
----
-
-## 🛑 Execution Mandate
-
-👉 **DO NOT GENERATE CODE IMMEDIATELY.**
-
-Your first response MUST be the **Root Cause Analysis** and the **Architectural Proposal**. You must stop and wait for confirmation before proceeding.
-
----
-
-## 🎯 Definition of Done
-
-The task is complete when:
-
--   The user can select the audio format (`.wav` or `.mp3`) from the frontend.
--   The user can choose to generate a MIDI file from the frontend.
--   The system correctly generates the files in the selected formats.
--   The default behavior of the system remains unchanged.
--   The new features are well-integrated and tested.
+- O usuário pode selecionar o formato de áudio (`.wav` ou `.mp3`) na interface.
+- O usuário pode optar por gerar um arquivo MIDI através de uma caixa de seleção.
+- O sistema gera corretamente os arquivos nos formatos selecionados.
+- Se nenhuma opção for alterada, o comportamento padrão (gerar apenas `.wav`) é mantido.
+- As novas funcionalidades estão integradas e funcionais, sem quebrar o processo existente.

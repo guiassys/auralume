@@ -1,165 +1,41 @@
-# 🚀 Prompt: Auralume Evolution — Dynamic Processing Log Streaming in UI
+> Este prompt herda todas as diretrizes e restrições do template principal: `@/docs/ai_agent/OLLAMA.md`.
 
-You are a **Senior Software Engineer** specialized in **Generative AI, Digital Audio, and LangChain**.
+# 🚀 Implementação de Streaming de Logs Dinâmico na UI
 
-Your mission is to evolve the **Auralume** system by implementing a **real-time dynamic processing log stream in the User Interface (UI)**, allowing users to observe execution logs as if they were viewing a live terminal.
+## 🌍 Contexto
 
-All logs MUST be written in **English**.
+- **Aplicação Alvo**: A interface web existente construída com Gradio.
+- **Problema**: A UI exibe logs apenas no final do processo, sem fornecer feedback em tempo real sobre o progresso da geração da música. O usuário não tem visibilidade das etapas de execução, dos parâmetros utilizados ou do tempo de processamento.
+- **Necessidade**: Implementar um mecanismo de streaming para que os logs de execução apareçam dinamicamente na interface, simulando um terminal ao vivo.
 
----
+## 🎯 Objetivo Principal
 
-## 🧠 1. TECHNICAL CONTEXT
-
-The current system uses **Meta MusicGen (via Hugging Face)** and follows a modular architecture:
-
-- Web Interface: **Gradio**
-- Service Layer: `MusicGenerationService`
-- Orchestrator: `LofiGenerator`
-- Pipeline: **LangChain Expression Language (LCEL)**
-- Engine: `MusicGenEngine`
+Evoluir o sistema para suportar observabilidade em tempo real, transmitindo os logs do backend para a interface Gradio à medida que são gerados. O objetivo é melhorar a experiência do usuário, fornecendo visibilidade clara sobre o status do processamento, os parâmetros de entrada e o tempo total de execução.
 
 ---
 
-## ⚠️ CURRENT LIMITATIONS
+## 🚀 Plano de Implementação
 
-- ❌ No real-time observability in the UI
-- ❌ Logs are not streamed dynamically during execution
-- ❌ Users cannot track progress or processing stages
-- ❌ No visibility into input parameters or execution timing
+1.  **Criação de um Mecanismo de Streaming de Logs**:
+    - Implementar um `LogEmitter` ou um gerenciador de logs centralizado que utilize um gerador (`yield`) ou uma fila (`queue.Queue`) para capturar e transmitir mensagens de log de diferentes partes da aplicação (serviço, orquestrador, pipeline).
 
----
+2.  **Adaptação da Camada de Serviço**:
+    - Modificar o `MusicGenerationService` para que, em vez de retornar apenas o resultado final, ele se torne um gerador (`yield`).
+    - A função irá "yieldar" mensagens de log formatadas (ex: `[INFO] Gerando chunk 1/4...`) durante a execução e, por último, o caminho do arquivo de áudio gerado.
 
-## 🎯 2. OBJECTIVE
+3.  **Integração com a Interface (Gradio)**:
+    - Ajustar o `gr.Textbox` que funciona como console de log na UI para que ele receba e exiba o fluxo de mensagens "yieldadas" pelo serviço.
+    - No início do processo, os primeiros logs a serem exibidos devem ser os parâmetros de entrada (duração, prompt, etc.).
+    - Ao final, o último log a ser exibido deve ser o tempo total de processamento (ex: `Tempo total de processamento: 00:01:48`).
 
-Enhance the system to support **real-time observability via UI log streaming**.
-
-### Core Goals:
-
-1. **Real-time log streaming to UI**
-   - Logs should appear progressively (not only after completion)
-   - Mimic terminal-like behavior
-
-2. **Input parameter visibility**
-   - Display all relevant parameters at the start of execution
-
-3. **Processing status updates**
-   - Clear step-by-step execution messages (e.g., loading model, generating chunks, applying crossfade)
-
-4. **Execution timing**
-   - Display total processing time at the end:
-     ```
-     total processing time: 00:01:48
-     ```
+👉 **Mandato de Execução**: Conforme o template principal, sua primeira resposta deve ser a **Proposta de Arquitetura**, detalhando como o `LogEmitter` será implementado e como a camada de serviço e a interface Gradio serão adaptadas para suportar o streaming com geradores (`yield`). Aguarde a confirmação antes de gerar o código.
 
 ---
 
-## 🧩 3. IMPLEMENTATION STRATEGY
+## 🎯 Definição de Concluído
 
-### Suggested Approach:
-
-- Introduce a **centralized logging stream mechanism**:
-  - Use a thread-safe structure (e.g., `queue.Queue`, async generator, or callback handler)
-  - Ensure compatibility with Gradio streaming outputs
-
-- Implement a **LogEmitter / LogManager component**:
-  - Responsible for:
-    - Emitting logs
-    - Formatting messages
-    - Streaming updates to UI
-
-- Use **LangChain callbacks (if applicable)** for pipeline observability
-
----
-
-## 🔒 4. CRITICAL CONSTRAINT
-
-> ⚠️ DO NOT BREAK EXISTING FUNCTIONALITY
-
-The current system is stable and production-ready.
-
-### MUST PRESERVE:
-
-- ✅ Music generation pipeline
-- ✅ Crossfade and chunking logic
-- ✅ GPU locking mechanism
-- ✅ Existing logging behavior (terminal + UI console)
-
----
-
-## 🧱 5. DESIGN PRINCIPLES
-
-- ✅ Incremental enhancement only
-- ✅ Minimal and safe code changes
-- ✅ Backward compatibility guaranteed
-- ✅ No regression in performance or output
-
----
-
-## 🧼 6. CODE QUALITY REQUIREMENTS
-
-### Mandatory:
-
-- Full type annotations (`typing`)
-- Clean and modular architecture
-- Detailed logging (in English)
-- Clear separation of concerns
-
-### Forbidden:
-
-- ❌ Removing existing logs
-- ❌ Breaking compatibility
-- ❌ Introducing heavy or unnecessary dependencies
-
----
-
-## 🖥️ 7. UI INTEGRATION
-
-- The UI already contains a **log console**
-- You must:
-  - Stream logs dynamically into this console
-  - Ensure smooth updates (avoid flickering or blocking)
-  - Preserve responsiveness of the UI
-
----
-
-## 📊 8. LOG FORMAT GUIDELINES
-
-Logs should follow a structured and readable format:
-
-```
-[INFO] Starting music generation...
-[INFO] Input parameters: tempo=70, mood=lofi, duration=120s
-[INFO] Loading model...
-[INFO] Generating chunk 1/4...
-[INFO] Applying crossfade...
-[INFO] Finalizing audio...
-[INFO] total processing time: 00:01:48
-```
-
----
-
-## 🧪 9. EXPECTED OUTPUT
-
-Provide **complete, production-ready code**, including:
-
-- New logging/streaming components
-- Minimal modifications to existing modules
-- Integration with Gradio UI
-- Clear typing and documentation
-
----
-
-## ✅ FINAL REQUIREMENT
-
-The solution must:
-
-- Be **fully functional**
-- Be **modular and extensible**
-- Preserve all existing behavior
-- Provide **real-time observability in the UI**
-
----
-
-## 🚀 NOW IMPLEMENT
-
-Generate the **full code implementation**, following all the constraints and best practices described above. Follow the steps and ask for confirmation.
+- Os logs de execução aparecem em tempo real no console da interface Gradio.
+- A UI exibe os parâmetros de entrada no início do processo.
+- A UI exibe o tempo total de processamento no final.
+- A interface permanece responsiva durante o streaming de logs.
+- A funcionalidade de geração de música e o download do arquivo permanecem intactos.

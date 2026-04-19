@@ -1,75 +1,50 @@
-# 🚀 Prompt: Auralume Evolution — Professional DAW Interface Implementation
+> Este prompt herda todas as diretrizes e restrições do template principal: `@/docs/ai_agent/OLLAMA.md`.
 
-**Role:** Senior Software Engineer (Generative AI, Digital Audio, & LangChain).
-**Context:** Evolving the **Auralume** system's UI from a basic Gradio layout to a professional Digital Audio Workstation (DAW) experience.
-**Language Requirement:** All logs and code documentation MUST be in **English**.
+# 🚀 Refatoração da UI para uma Experiência de DAW Profissional
 
----
+## 🌍 Contexto
 
-## 🧠 1. TECHNICAL STACK & ARCHITECTURE
-The system uses a modular Python architecture:
-- **UI:** Gradio (Current target for redesign).
-- **Inference:** Meta MusicGen via Hugging Face.
-- **Orchestration:** LangChain Expression Language (LCEL) & `LofiGenerator`.
-- **Engine:** `MusicGenEngine` & `MusicGenerationService`.
+- **Aplicação Alvo**: A interface web existente construída com Gradio.
+- **Problema**: A interface atual é funcional, mas visualmente básica. Ela não reflete a sofisticação de uma ferramenta de produção musical.
+- **Necessidade**: Redesenhar a UI para que ela se assemelhe a uma Digital Audio Workstation (DAW) profissional (ex: Ableton Live, FL Studio), melhorando a identidade visual e a organização dos controles.
 
----
+## 🎯 Objetivo Principal
 
-## 🎯 2. OBJECTIVE: UI/UX OVERHAUL
-Redesign the Gradio interface to mimic a professional DAW (e.g., Ableton Live, FL Studio).
-
-### A. Visual Identity (Industrial Dark Mode)
-* **Aesthetics:** Graphite grays and matte black backgrounds.
-* **Accents:** Neon green or electric blue for active states and progress bars.
-* **Typography:** Modern sans-serif with monospaced fonts for technical/numerical data.
-
-### B. Layout Hierarchy
-1.  **Header (Global):**
-    * Left: Auralume Logo + System Status (CPU/Inference Engine).
-    * Center: **Persistent Progress Bar** (Slim, glowing) showing "Rendering..." status and %.
-2.  **Sidebar (Left - Expansive):**
-    * Icons: [Studio Tools (Active)], [About], [Help].
-3.  **Main Workspace (Tabbed Interface):**
-    * **Tab 1: Track Definitions:** Genre, BPM, Key, Mood, and Style Prompt.
-    * **Tab 2: Studio Adjustments:** Sliders for Reverb, Delay, Compression, and Instrument selection.
-    * **Tab 3: Console:** Waveform visualization and Export options (WAV/MP3).
-4.  **Footer:** Session timer, versioning, and system links.
-
-### C. Interaction Logic (UX)
-* **Non-Blocking Navigation:** Users must be able to switch tabs and browse the sidebar during generation.
-* **State Locking:** Use Gradio's `interactive=False` or `gr.update` to lock "Generate" and "Clear" buttons strictly while the process is running. Unlock only upon completion.
+Refatorar completamente a interface Gradio para adotar uma estética de DAW, com um tema escuro industrial, acentos em neon e um layout hierárquico e organizado em abas. O objetivo é criar uma experiência de usuário mais imersiva e profissional, sem alterar a lógica de backend.
 
 ---
 
-## ⚠️ 3. CRITICAL CONSTRAINTS & PRESERVATION
-> **DO NOT BREAK STABLE FUNCTIONALITY.**
+## 🚀 Plano de Implementação
 
-**Must Maintain:**
-- ✅ Music generation pipeline & GPU locking.
-- ✅ Crossfade/chunking logic.
-- ✅ Existing terminal and UI logging behavior.
-- ✅ Backward compatibility with current service layers.
+1.  **Definição da Identidade Visual (Tema e Estilo)**:
+    - Criar um `gr.Theme` customizado para implementar a estética "Industrial Dark Mode":
+        - **Cores**: Fundos em tons de cinza grafite e preto fosco.
+        - **Acentos**: Cores como verde neon ou azul elétrico para elementos ativos (botões, sliders, barras de progresso).
+        - **Fontes**: Utilizar fontes sans-serif modernas para textos gerais e fontes monoespaçadas para dados numéricos e técnicos.
 
-**Forbidden:**
-- ❌ Removing existing logs.
-- ❌ Adding heavy external CSS frameworks (Use Gradio's built-in `css` and `theme` capabilities).
-- ❌ Breaking the LCEL chain integration.
+2.  **Reestruturação do Layout com Abas**:
+    - Utilizar `gr.Blocks` como base e organizar a área de trabalho principal com `gr.Tabs`.
+    - **Aba 1: "Definições da Faixa"**: Agrupar os controles principais de geração, como `Gênero`, `BPM`, `Tonalidade`, `Humor` e o `Prompt de Estilo`.
+    - **Aba 2: "Ajustes de Estúdio"**: Adicionar sliders para futuros controles de pós-processamento, como `Reverb`, `Delay` e `Compressão`.
+    - **Aba 3: "Console e Exportação"**: Manter o console de log e adicionar uma visualização de forma de onda (`gr.Waveform`) e as opções de exportação (WAV/MP3).
+
+3.  **Implementação de Componentes Globais**:
+    - **Header**: Criar uma seção no topo com o logo da Auralume e um indicador de status do sistema. Incluir uma barra de progresso persistente e fina que fica ativa durante a geração.
+    - **Sidebar (Barra Lateral)**: Adicionar uma barra lateral à esquerda com ícones para navegação entre seções principais, como "Estúdio", "Sobre" e "Ajuda".
+
+4.  **Lógica de Interação (UX)**:
+    - Garantir que a navegação entre as abas e a barra lateral não seja bloqueada durante o processo de geração.
+    - Implementar o bloqueio de estado (`interactive=False`) para os botões "Gerar" e "Limpar" apenas enquanto a música estiver sendo gerada, liberando-os ao final.
+
+👉 **Mandato de Execução**: Conforme o template principal, sua primeira resposta deve ser a **Proposta de Arquitetura**, detalhando a estrutura do `gr.Theme` customizado e como o layout com `gr.Blocks` e `gr.Tabs` será organizado. Aguarde a confirmação antes de gerar o código.
 
 ---
 
-## 🧼 4. CODE QUALITY & OUTPUT
-Provide **complete, production-ready code**. If necessary, split the UI logic into `src/web/ui_components.py` or similar to maintain modularity.
+## 🎯 Definição de Concluído
 
-**Requirements:**
-- Full `typing` annotations.
-- Clean separation between Gradio event listeners and business logic.
-- Minimal changes to `MusicGenEngine`—focus on the `web` layer.
-
----
-
-## 🚀 IMPLEMENTATION STEP-BY-STEP
-1.  Define the custom **Gradio Theme** (Dark Mode/Neon Accents).
-2.  Refactor the main layout into `gr.Blocks()` with `gr.Tabs()`.
-3.  Implement the Sidebar and Header logic.
-4.  Update the event triggers to handle **State Locking** for buttons.
-5.  **Stop and ask for confirmation after presenting the architectural plan before generating the full code.**
+- A interface Gradio utiliza um tema escuro customizado com acentos em neon.
+- O layout está organizado em abas (Definições, Ajustes, Console).
+- Componentes globais como Header e Sidebar estão implementados.
+- A navegação na UI não é bloqueada durante a geração.
+- Os botões de ação são devidamente bloqueados e desbloqueados.
+- A nova UI está totalmente integrada com o backend existente, sem quebrar nenhuma funcionalidade.

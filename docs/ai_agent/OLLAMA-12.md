@@ -1,132 +1,63 @@
-# 🚀 Prompt: Holistic Refactoring for Quality and Coherence
+> Este prompt herda todas as diretrizes e restrições do template principal: `@/docs/ai_agent/OLLAMA.md`.
 
-## 🧠 Persona
+# 🚀 Refatoração Holística para Qualidade e Coerência Musical
 
-As an expert AI Software Architect, my role is to analyze the existing Auralume application, identify architectural inconsistencies and opportunities for improvement, and propose a detailed refactoring plan. The primary goal is to enhance the quality, coherence, and length of the generated music while improving code maintainability, performance, and user experience.
+## 🌍 Contexto
 
----
+- **Aplicação Alvo**: A aplicação Auralume como um todo.
+- **Problema Crítico**: A aplicação sofre de **perda de contexto** em músicas longas (acima de 30 segundos). A estratégia de "chunking" (dividir em pedaços) é ingênua, gerando cada segmento de forma independente, o que resulta em uma faixa sem identidade musical, com quebras abruptas de estilo e melodia.
+- **Causa Raiz**: Existência de dois pipelines de geração: um simples e problemático (`TrackGenerator`) e um avançado, porém inativo (`MusicPipeline`). A perda de contexto ocorre porque o pipeline simples é o que está em uso.
 
-## 🌍 Context
+## 🎯 Objetivo Principal
 
-The user wants to improve the Auralume application to generate high-quality, coherent music up to 3 minutes long. The current implementation suffers from **critical context loss** in longer tracks, where each segment is generated independently, causing the music to lose its identity. This is a direct result of a naive chunking strategy.
-
-This plan outlines a holistic refactoring process to address these issues, focusing on activating an advanced generation pipeline that uses an **Audio Continuation** strategy to maintain musical coherence.
-
----
-
-## 🎯 Primary Objective
-
-Refactor the Auralume application to:
-1.  **Generate High-Coherence Music:** Produce musically consistent tracks up to 3 minutes long by implementing an **audio continuation (priming)** strategy. This solves the core problem of context loss.
-2.  **Unify the Architecture:** Eliminate the redundant, simple generation pipeline in favor of the advanced, structure-aware pipeline.
-3.  **Optimize Performance:** Improve application startup time and reduce GPU memory consumption through techniques like lazy loading and quantization.
-4.  **Enhance Code Quality:** Ensure the codebase adheres to best practices, including the Single Responsibility Principle (SRP) and full configuration-driven behavior (no hardcoding).
+Realizar uma refatoração holística para resolver os problemas de qualidade e coerência, permitindo a geração de faixas de alta qualidade com até 3 minutos de duração. Os objetivos são: unificar a arquitetura em torno do pipeline avançado, implementar uma estratégia de **continuação de áudio** para manter o contexto, otimizar a performance e garantir que o código siga as melhores práticas.
 
 ---
 
-## ⚠️ Hard Constraints
+## 🚀 Plano de Implementação
 
-### ✅ Must Preserve
-- All existing UI functionalities, including logging, monitoring, and progress bar updates.
-- The application must continue to be driven by the `config.json` file.
-- The ability to handle both Windows and Linux style paths for the output directory must be maintained.
+### Fase 1: Ativação do Pipeline Avançado com Continuação de Áudio
 
-### ❌ Forbidden
-- Do not break existing core features.
-- Do not introduce new hardcoded parameters; all configurations must be sourced from `config.json`.
-- Do not remove the "fail-fast" approach for `config.json` loading.
+1.  **Unificação da Arquitetura**:
+    - **Desativar o Pipeline Simples**: Remover a lógica de geração em loop do `TrackGenerator`. Esta classe será renomeada para `MusicGenEngine` e sua única responsabilidade será gerar um **único** segmento de áudio a partir de um prompt.
+    - **Ativar o Pipeline Avançado**: Modificar o `MusicGenerationService` para que ele utilize exclusivamente o `MusicPipeline` (com seus componentes `MusicArchitect` e `MusicComposer`) como o motor principal de geração.
 
----
+2.  **Implementação da Continuação de Áudio (Audio Priming)**:
+    - Esta é a solução central para a perda de contexto. A lógica será implementada no `MusicComposer`.
+    - **Mecanismo**:
+        1.  O primeiro "chunk" (ex: 0-30s) é gerado a partir do prompt de texto.
+        2.  Um pequeno trecho do final deste chunk (ex: os últimos 2 segundos) é extraído como um "primer" de áudio.
+        3.  O próximo chunk é gerado usando tanto o prompt de texto original (para manter o estilo) quanto o "primer" de áudio (para garantir a continuidade musical).
+        4.  O novo segmento gerado é "costurado" ao anterior, e o processo se repete.
+    - **Configuração**: Este comportamento será controlado via `config.json` com as novas chaves: `use_continuation: true` e `continuation_primer_s: 2`.
 
-## 💡 Key Technical Directives (Prioritized)
+### Fase 2: Otimização de Performance
 
-1.  **Architectural Unification:** The most critical issue is the dual-pipeline architecture. The simple, naive continuation loop in `TrackGenerator` is the root cause of context loss. The advanced, structure-aware pipeline (`MusicPipeline`, `MusicArchitect`, `MusicComposer`) is the solution. **Our top priority is to make this advanced pipeline the primary engine for music generation.**
+1.  **Lazy Loading do Modelo**:
+    - Modificar o `MusicGenEngine` para que o modelo de IA não seja carregado na VRAM na inicialização da aplicação. O carregamento (`AutoModel.from_pretrained(...)`) ocorrerá apenas na primeira vez que o usuário solicitar a geração de uma música, garantindo um startup rápido e menor consumo de recursos.
 
-2.  **Long-Term Context Management (Audio Continuation):** The key to coherence is **audio continuation**, not just text-prompt continuation. The correct approach is to use the end of the previously generated clip as a "primer" for the next one.
-    *   **Mechanism:** The `MusicComposer` will orchestrate this. For a 180s track with 30s chunks:
-        1.  **Chunk 1 (0-30s):** Generated from the initial text prompt.
-        2.  **Primer (28-30s):** The last `continuation_primer_s` (e.g., 2 seconds) of Chunk 1 are extracted.
-        3.  **Chunk 2 (30-58s):** Generated using the 2-second audio primer as the primary prompt. This ensures the model continues the melody, harmony, and rhythm.
-        4.  **Stitching:** The new 28-second segment is appended to the first 30s chunk.
-        5.  This process repeats until the total duration is reached.
-    *   **Configuration:** This behavior must be controlled via `config.json`. We will introduce `use_continuation: true` and `continuation_primer_s: 2` to `generator_settings`.
+2.  **Suporte a Quantização**:
+    - Adicionar uma opção `quantization` no `config.json` (ex: `"quantization": "8bit"`) para permitir o carregamento do modelo com precisão reduzida. Isso diminui significativamente o uso de VRAM, viabilizando a geração de faixas mais longas em hardware com menos recursos.
 
-3.  **Performance Optimization:**
-    *   **Lazy Loading:** The MusicGen model should not be loaded into VRAM on application startup. It should be loaded only on the first generation request to ensure a fast startup and efficient resource management.
-    *   **Quantization:** To handle long generation tasks and reduce memory footprint, we should add support for model quantization (e.g., 8-bit) as a configurable option.
+### Fase 3: Polimento Final
 
-4.  **Configuration and UI Enhancements:**
-    *   The UI must be adapted to fully support the advanced pipeline. This includes providing clear controls for structured generation and the new continuation feature.
-    *   The progress bar logic should be made more accurate by basing it on the actual number of planned generation chunks.
-    *   The `config.json` file will be the single source of truth and must be updated to support the new features.
+1.  **Ajustes na UI e Configuração**:
+    - Adicionar na aba "Configurações" da UI os controles para as novas funcionalidades: um checkbox para `use_continuation`, um slider para `continuation_primer_s` e um dropdown para `quantization`.
+    - Tornar a barra de progresso mais precisa, baseando seu cálculo no número total de "chunks" a serem gerados, que é definido pelo `MusicArchitect`.
 
----
+2.  **Validação de Configuração**:
+    - Implementar uma função `validate_config()` que é chamada na inicialização para verificar se todas as chaves necessárias (incluindo as novas) existem no `config.json`, garantindo a robustez do sistema.
 
-## 🚀 Implementation Plan
-
-### Phase 1: Activate the Advanced Generation Pipeline with Audio Continuation
-
-1.  **Refactor `MusicGenerationService`:**
-    *   Modify `generate_music` to instantiate and invoke the `MusicPipeline` from `musicgen_pipeline.py`.
-    *   Remove the direct dependency on `TrackGenerator`. The service will now orchestrate the high-level pipeline.
-
-2.  **Refactor `TrackGenerator` into `MusicGenEngine`:**
-    *   Rename `TrackGenerator` to `MusicGenEngine`. Its responsibility is now to be the low-level "engine" that generates a **single audio chunk** based on a text prompt and, optionally, an audio primer.
-    *   The looping and stitching logic will be completely removed from this class.
-
-3.  **Integrate `MusicPipeline` with Continuation Logic:**
-    *   The `MusicComposer` will receive the generation plan from the `MusicArchitect`. Its main loop will now implement the **Audio Continuation** strategy:
-        *   It calls the `MusicGenEngine` for the first chunk with only a text prompt.
-        *   For all subsequent chunks, it extracts the audio primer from the previously generated audio and calls `MusicGenEngine` with **both** the original text prompt (for style guidance) and the **audio primer** (for musical context).
-    *   The `log_stream` and progress bar updates must be passed down and updated from within this loop to ensure the UI remains responsive and informative.
-
-4.  **Update `config.json` and UI for Continuation:**
-    *   In `config.json` under `generator_settings`, add a boolean `use_continuation` and a float `continuation_primer_s` (in seconds).
-    *   To avoid confusion, rename `chunk_duration` to `chunk_duration_s` and remove the old `overlap_duration` parameter.
-    *   **UI Change:** Add a checkbox in the UI settings to toggle `use_continuation` and a slider/input for `continuation_primer_s`. This gives the user direct control over the generation strategy.
-
-### Phase 2: Implement Performance Optimizations
-
-1.  **Implement Lazy Loading:**
-    *   Modify the `MusicGenEngine`. The `MusicGen` model (`self.engine.model`) should be initialized to `None`.
-    *   Inside its `generate` method, add a check: `if self.model is None: self.load_model()`.
-    *   The `load_model()` method will contain the actual `AutoModel.from_pretrained(...)` call.
-
-2.  **Add Quantization Support:**
-    *   Add a `quantization` setting to `generator_settings` in `config.json` (e.g., `"quantization": "8bit"`).
-    *   In the `load_model()` method, check this setting and add the appropriate `load_in_8bit=True` parameter to the `from_pretrained` call.
-    *   Add a dropdown in the UI to allow the user to select the quantization level.
-
-### Phase 3: Final Polish
-
-1.  **Dynamic Progress Bar:**
-    *   In the `MusicComposer`, before the generation loop begins, calculate the total number of chunks (`num_chunks`).
-    *   Pass this `num_chunks` value back up to the UI handler to be used for the progress bar.
-
-2.  **Configuration Validation:**
-    *   Introduce a `validate_config(settings)` function that is called on startup.
-    *   This function will check for the presence and correct types of all essential keys, including the new continuation parameters. If validation fails, it should raise a `RuntimeError` with a clear message.
+👉 **Mandato de Execução**: Conforme o template principal, sua primeira resposta deve ser a **Proposta de Arquitetura**, detalhando como o `MusicComposer` implementará a estratégia de continuação de áudio e como o `MusicGenEngine` será modificado para suportar lazy loading e quantização. Aguarde a confirmação antes de gerar o código.
 
 ---
 
-## 🛑 Execution Mandate
+## 🎯 Definição de Concluído
 
-👉 **DO NOT GENERATE CODE IMMEDIATELY.**
-
-Your first response MUST be the **Root Cause Analysis** and the **Architectural Proposal**. You must stop and wait for confirmation before proceeding.
-
-*(Self-correction: Since this plan is the output of that analysis, the next step is to await user confirmation of this document before proceeding to Phase 1 implementation.)*
-
----
-
-## 🎯 Definition of Done
-
-The task is complete when:
-1.  The application exclusively uses the `MusicPipeline` with the **Audio Continuation** strategy for music generation.
-2.  The application can generate coherent, high-quality music for durations of up to 3 minutes.
-3.  The MusicGen model is lazy-loaded.
-4.  Model quantization is a configurable option in both `config.json` and the UI.
-5.  The audio continuation feature (`use_continuation`, `continuation_primer_s`) is configurable in `config.json` and the UI.
-6.  The progress bar accurately reflects the number of generation steps.
-7.  The codebase is clean, modular, and free of hardcoded generation parameters.
-8.  All existing functionality remains intact.
+- A aplicação utiliza exclusivamente o `MusicPipeline` com a estratégia de continuação de áudio.
+- É possível gerar músicas coerentes de até 3 minutos.
+- O modelo de IA é carregado apenas sob demanda (lazy loading).
+- A quantização do modelo é uma opção configurável na UI e no `config.json`.
+- A continuação de áudio é uma opção configurável na UI e no `config.json`.
+- A barra de progresso reflete com precisão o andamento da geração.
+- O código está limpo, modular e totalmente configurável via `config.json`.

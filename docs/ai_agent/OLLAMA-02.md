@@ -1,153 +1,49 @@
-# Prompt para Refatoração com Interface Web (Gradio)
+> Este prompt herda todas as diretrizes e restrições do template principal: `@/docs/ai_agent/OLLAMA.md`.
 
-Você é um engenheiro de software especialista em Python, IA generativa, pipelines com LangChain e desenvolvimento de interfaces Web com Gradio.
+# 🚀 Criação de Interface Web com Gradio
 
-Sua tarefa é refatorar uma aplicação Python já existente e funcional, localizada no diretório: C:\devtools\repo\auralume\src\scripts
+## 🌍 Contexto
 
-Essa aplicação utiliza modelos da Hugging Face e LangChain para gerar músicas. O objetivo é adicionar uma interface Web utilizando Gradio, sem quebrar a funcionalidade atual e mantendo compatibilidade total com o pipeline existente.
+- **Aplicação Alvo**: O sistema de geração de música já refatorado para um pipeline com LangChain, executado via CLI.
+- **Necessidade**: Criar uma interface web amigável para que usuários não-técnicos possam utilizar a ferramenta sem usar a linha de comando.
+- **Tecnologia**: A interface deve ser construída utilizando a biblioteca Gradio.
 
----
+## 🎯 Objetivo Principal
 
-## CONTEXTO
-
-A aplicação atual:
-
-- Já funciona corretamente
-- Executa via terminal com o comando: python -m src.scripts.generate_lofi_ai
-- Recebe inputs do usuário via CLI
-- Já foi refatorada para utilizar pipeline modular com LangChain
-- Possui processamento potencialmente demorado
+Desenvolver uma interface web com Gradio que sirva como uma camada visual (frontend) para o pipeline de geração de música existente. A interface deve permitir ao usuário inserir os parâmetros, iniciar a geração e fazer o download do resultado, sem alterar a lógica de negócio do pipeline.
 
 ---
 
-## OBJETIVO
+## 🚀 Plano de Implementação
 
-Criar uma interface Web usando Gradio que funcione como uma camada visual sobre o sistema atual.
+1.  **Criação da Camada de Serviço**:
+    - Desenvolver uma função de serviço (ex: `generate_music_service`) que receba os parâmetros da interface (`nome_da_musica`, `duracao`, `prompt`) e orquestre a chamada ao pipeline LangChain existente.
+    - Esta função será responsável por salvar o arquivo de saída em um diretório pré-definido (ex: `/outputs`) e retornar o caminho do arquivo.
 
-A interface deve permitir que o usuário:
+2.  **Desenvolvimento da Interface com Gradio**:
+    - Utilizar `gradio.Blocks` para estruturar a UI.
+    - **Componentes do Formulário**:
+        - `gr.Textbox` para "Nome da música".
+        - `gr.Dropdown` para "Duração" com opções (30, 60, 90, 180 segundos).
+        - `gr.Textbox` para o "Estilo musical" (prompt).
+        - `gr.Button` para "Gerar música".
+    - **Componentes de Saída**:
+        - Um componente de status para indicar que a música está sendo gerada (ex: `gr.Label("Gerando...")`).
+        - Um componente de `gr.File` para o download, que ficará visível apenas após a conclusão.
 
-1. Preencha um formulário
-2. Execute a geração de música
-3. Acompanhe o progresso (se possível)
-4. Faça download do arquivo gerado
+3.  **Integração e Execução**:
+    - O botão "Gerar música" acionará a função de serviço.
+    - A interface deve permanecer responsiva durante a geração (execução não-bloqueante).
+    - Após a conclusão, o caminho do arquivo retornado pelo serviço será usado para habilitar o download.
 
-⚠️ IMPORTANTE: A lógica de geração de música NÃO deve ser reescrita, apenas reutilizada.
-
----
-
-## ENTRADAS DO SISTEMA (DEVEM SER PRESERVADAS)
-
-O pipeline deve continuar aceitando exatamente:
-
-- `nome_da_musica` (string)
-- `duracao` (int ou float)
-- `prompt` (string — estilo musical, ex: "hip hop", "lo-fi", "rock")
-
----
-
-## REQUISITOS FUNCIONAIS
-
-### Layout
-- Header com título: **Auralume Web**
-
-### Formulário
-- Campo: Nome da música (texto)
-- Campo: Duração (select: 30, 60, 90, 180)
-- Campo: Estilo musical (textarea)
-- Botão: "Gerar música"
-
-### Pós-processamento
-- Exibir status/progresso da geração (ex: loading, etapas do pipeline)
-- Botão de download do arquivo gerado (visível apenas após conclusão)
-- Exibir caminho ou nome do arquivo gerado
+👉 **Mandato de Execução**: Conforme o template principal, sua primeira resposta deve ser a **Proposta de Arquitetura**, detalhando a estrutura de arquivos (ex: `web/app.py`, `services/music_service.py`) e como a UI do Gradio irá interagir com a camada de serviço. Aguarde a confirmação antes de gerar o código.
 
 ---
 
-## REQUISITOS TÉCNICOS IMPORTANTES
+## 🎯 Definição de Concluído
 
-### Arquitetura
-- Separar claramente:
-- Camada de UI (Gradio)
-- Camada de aplicação (orquestração)
-- Camada de domínio (pipeline existente)
-- NÃO misturar lógica de negócio com interface
-
-### Integração
-- Reutilizar o pipeline LangChain existente
-- Encapsular a execução em uma função clara (ex: `generate_music_service`)
-
-### Performance
-- Evitar recomputações desnecessárias
-- Considerar execução assíncrona (async ou thread)
-- Evitar travar a interface (non-blocking UI)
-
-### Gerenciamento de arquivos
-- Salvar músicas geradas em diretório definido (ex: `/outputs`)
-- Garantir nomes únicos de arquivos (evitar sobrescrita)
-- Retornar caminho do arquivo corretamente para download
-
-### Estado da aplicação
-- Garantir que múltiplos usuários não conflitem (isolamento básico)
-- Evitar uso de variáveis globais perigosas
-
-### UX (Experiência do usuário)
-- Mostrar feedback durante processamento (loading ou mensagens)
-- Desabilitar botão enquanto processa
-- Tratar erros com mensagens amigáveis
-
-### Tratamento de erros
-- Capturar exceções
-- Retornar mensagens claras na UI
-- Não expor stacktrace sensível ao usuário
-
-### Logging
-- Adicionar logging básico (info, erro)
-- Logar início/fim de geração
-
----
-
-## INSTRUÇÕES DE IMPLEMENTAÇÃO
-
-- Usar Gradio (Blocks ou Interface)
-- Criar função principal que conecta UI → pipeline
-- Modularizar código (ex: `web/`, `services/`, `pipeline/`)
-- Garantir que a aplicação continue podendo ser executada via CLI
-
----
-
-## SAÍDA ESPERADA
-
-Forneça:
-
-1. Código completo em Python
-2. Estrutura de diretórios sugerida
-3. Interface Web funcional com Gradio
-4. Código comentado explicando decisões
-5. Função principal de execução
-6. Exemplo de execução local
-
----
-
-## RESTRIÇÕES IMPORTANTES
-
-- NÃO reescrever o pipeline existente
-- NÃO alterar comportamento original
-- NÃO introduzir dependências desnecessárias
-- NÃO quebrar execução via terminal
-
----
-
-## EXTRA (DESEJÁVEL)
-
-- Barra de progresso ou status por etapa do pipeline
-- Cache simples (se aplicável)
-- Sugestão de deploy (ex: local ou Hugging Face Spaces)
-- Estrutura pronta para futura API REST
-
----
-
-## RESULTADO FINAL
-
-O resultado deve ser uma aplicação Web funcional, modular e pronta para uso, mantendo compatibilidade total com o sistema atual e melhorando significativamente a experiência do usuário.
-
-**Gere o código completo e funcional.**
+- A aplicação web com Gradio está funcional e pode ser executada localmente.
+- O formulário captura os inputs do usuário e os passa corretamente para o pipeline.
+- O usuário recebe feedback visual durante o processamento.
+- O arquivo de música gerado pode ser baixado diretamente pela interface.
+- A execução original via CLI permanece funcional.

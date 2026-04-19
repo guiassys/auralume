@@ -1,263 +1,47 @@
-# Prompt: Evolução Auralume - Base de Conhecimento por Referência de Áudio
+> Este prompt herda todas as diretrizes e restrições do template principal: `@/docs/ai_agent/OLLAMA.md`.
 
-Você é um Engenheiro de Software Sênior especialista em IA Generativa, Áudio Digital e LangChain.
+# 🚀 Evolução para Audio-RAG com Referência Sonora
 
-Sua missão é evoluir o projeto **Auralume** para incorporar uma **Base de Conhecimento de Áudio (Audio-RAG)**, permitindo que o sistema utilize arquivos de referência sonora fornecidos pelo usuário para guiar a identidade musical das composições geradas.
+## 🌍 Contexto
 
----
+- **Aplicação Alvo**: O pipeline de composição musical estruturada.
+- **Problema**: A geração atual, embora estruturada, carece de uma identidade sonora forte e consistente, pois o sistema de RAG (Retrieval-Augmented Generation) é baseado em dados simulados (`np.random.rand`) e não em uma referência musical real.
+- **Necessidade**: Permitir que o usuário forneça uma música de referência (`.wav`) para guiar o estilo, o timbre e a atmosfera da composição gerada.
 
-## 1. CONTEXTO TÉCNICO
+## 🎯 Objetivo Principal
 
-O sistema atual utiliza o modelo `MusicGen` da Meta (via Hugging Face), com uma arquitetura modular baseada em:
-
-- Interface Web com Gradio
-- Service Layer (`MusicGenerationService`)
-- Orquestrador (`LofiGenerator`)
-- Pipeline com LangChain (LCEL)
-- Engine de geração (`MusicGenEngine`)
-
-### Problemas atuais:
-
-- **Amnésia musical**: falta de continuidade entre seções
-- **Falta de coerência estilística** ao longo da música
-- **RAG fictício** baseado em embeddings aleatórios
-- **Ausência de referência sonora real** para guiar a geração
+Evoluir o sistema para implementar um **Audio-RAG real**. Isso envolve adicionar um campo de upload de arquivo na interface Gradio e refatorar o pipeline para extrair embeddings do áudio de referência, usando-os para garantir coerência estilística em toda a música gerada.
 
 ---
 
-## 2. OBJETIVO DA REFATORAÇÃO
+## 🚀 Plano de Implementação
 
-Evoluir o sistema para suportar **Audio-RAG real**, permitindo que uma música de referência influencie diretamente a geração.
+1.  **Atualização da Interface (Gradio)**:
+    - Adicionar um componente `gr.File` na interface `app.py` para permitir o upload de um arquivo `.wav`. Este campo será opcional.
 
-### Objetivos principais:
+2.  **Adaptação da Camada de Serviço e Orquestração**:
+    - Modificar o `MusicGenerationService` para receber o caminho do arquivo de áudio de referência (se fornecido).
+    - Propagar este caminho através do orquestrador (`LofiGenerator`) até o pipeline.
 
-- 🎼 **Estrutura musical realista**
-- 🎧 **Coerência estilística baseada em referência**
-- 🧠 **Memória musical contextual**
-- 🧩 **Separação clara de responsabilidades**
-- ⚙️ **Preservação do que já funciona**
+3.  **Refatoração do Pipeline (LCEL) para Audio-RAG**:
+    - **No `Stage 1: Music Architect`**: O pipeline receberá o caminho do áudio de referência.
+    - **No `Stage 2: Contextual Engine`**:
+        - **Substituir o RAG Fictício**: A lógica que gera embeddings aleatórios (`np.random.rand`) será substituída por um processo real.
+        - **Extração de Embeddings**: Implementar uma função para extrair embeddings do áudio de referência usando um modelo apropriado (ex: CLAP).
+        - **Indexação e Recuperação**: Indexar os embeddings no `SimpleVectorStore` (ou similar) e usá-los para enriquecer os prompts de cada seção da música, garantindo que a geração subsequente (verso, refrão) seja estilisticamente consistente com a referência.
 
----
+4.  **Melhoria no Logging**:
+    - Expandir o console de logs na UI para exibir informações sobre o processo de Audio-RAG, como "Analisando áudio de referência...", "Embeddings extraídos com sucesso", e o tempo total de processamento.
 
-## 3. NOVA FEATURE (CRÍTICA)
-
-### Upload de arquivo `.wav` na interface
-
-A interface deve permitir que o usuário faça upload de um arquivo de áudio (`.wav`) que será utilizado como **fonte de conhecimento musical**.
-
-### Requisitos dessa feature:
-
-- O upload deve ser **opcional**
-- Não deve quebrar o fluxo atual (fallback para modo sem referência)
-- O arquivo deve ser propagado por toda a arquitetura:
-  - `app.py` → `music_service.py` → `generator.py` → `pipeline`
-- O sistema deve utilizar esse áudio para:
-  - Extração de características (embedding, energia, etc.)
-  - Alimentar o sistema de RAG real
-  - Influenciar os prompts de geração
+👉 **Mandato de Execução**: Conforme o template principal, sua primeira resposta deve ser a **Proposta de Arquitetura**, detalhando como o arquivo de áudio será propagado pelas camadas da aplicação e como o `Contextual Engine` será modificado para substituir o RAG fictício pelo processo de extração e uso de embeddings reais. Aguarde a confirmação antes de gerar o código.
 
 ---
 
-## 4. DIRETRIZ CRÍTICA
-
-> ⚠️ **NÃO QUEBRAR O QUE JÁ FUNCIONA**
-
-- O sistema atual já gera música corretamente
-- O crossfade e chunking estão estáveis
-- O controle de GPU via lock está correto
-
-### Portanto:
-
-- A nova feature deve ser **incremental**
-- Código existente deve ser **preservado ao máximo**
-- Alterações devem ser **mínimas e seguras**
-
----
-
-## 5. NOVA ARQUITETURA DO PIPELINE (LCEL)
-
-### Stage 1: Music Architect (Planejamento)
-
-**Entrada:**
-- Prompt textual
-- Duração
-- Estilo
-- Caminho do áudio de referência (opcional)
-
-**Responsabilidades:**
-- Definir estrutura da música (intro, verso, etc.)
-- Determinar como a referência será usada
-- Preparar contexto inicial
-
----
-
-### Stage 2: Contextual Engine (Composição com RAG)
-
-**Responsabilidades:**
-
-Substituir:
-
-```python
-embedding = np.random.rand(128)
-```
-
-Por:
-
-- Extração real de embeddings do áudio (ex: CLAP, torchaudio, etc.)
-- Indexação no vector store
-- Recuperação contextual baseada na referência
-
-**Objetivo:**
-- Garantir consistência de:
-  - Timbre
-  - Instrumentação
-  - Energia
-  - Atmosfera
-
----
-
-### Stage 3: Audio Engineer (Pós-processamento)
-
-**Manter intacto:**
-- Crossfade
-- Merge de seções
-- Normalização
-
----
-
-## 6. IMPLEMENTAÇÃO DO AUDIO-RAG
-
-### Requisitos técnicos:
-
-- Criar pipeline de extração leve (não competir com VRAM do MusicGen)
-- Converter áudio em representação vetorial
-- Indexar no `SimpleVectorStore` (ou evolução dele)
-
-### Comportamento esperado:
-
-- Intro, verso e refrão compartilham identidade
-- Evitar mudanças bruscas de estilo
-- Reutilizar contexto ao longo da geração
-
----
-
-## 7. INTEGRAÇÃO COM A INTERFACE (GRADIO)
-
-### Adicionar:
-
-```python
-gr.File(file_types=[".wav"])
-```
-
-### Requisitos:
-
-- O arquivo deve ser acessível no backend
-- O estado deve ser mantido durante execução
-- Deve aparecer no pipeline como `reference_audio_path`
-
----
-
-## 8. SERVICE LAYER
-
-### `MusicGenerationService`
-
-Deve:
-
-- Receber o caminho do áudio
-- Incluir no `config`
-- Garantir compatibilidade com chamadas antigas
-
----
-
-## 9. GENERATOR (ORQUESTRADOR)
-
-### `LofiGenerator`
-
-Deve:
-
-- Receber o áudio de referência
-- Passar para o pipeline
-- Garantir fallback seguro se não houver referência
-
----
-
-## 10. QUALIDADE DE CÓDIGO
-
-### Obrigatório:
-
-- Tipagem completa (`typing`)
-- Logging detalhado (em inglês)
-- Código modular e limpo
-
-### Proibido:
-
-- Remover logs existentes no console web (user interface)
-- Quebrar compatibilidade
-- Introduzir dependências pesadas sem justificativa
-
----
-
-## 11. MONITORAMENTO
-
-A UI já possui um console de logs.
-
-### Deve ser expandido para mostrar:
-
-- Prompt enviado para o modelo de IA
-- Etapas de análise do áudio
-- Extração de embeddings
-- Uso do RAG
-- Decisões do pipeline
-- Total de tempo consumido do incio ao fim do processo. Ex: total processing time: 00:01:48
-
----
-
-## 12. SAÍDA ESPERADA
-
-Forneça a implementação completa e integrada dos seguintes arquivos:
-
-1. `app.py`
-   - Adicionar upload `.wav`
-   - Integrar ao fluxo existente
-
-2. `music_service.py`
-   - Transportar referência de áudio
-
-3. `musicgen_pipeline.py`
-   - Substituir RAG fake por real
-
-4. `musicgen_engine.py`
-   - Manter estável (mínimas mudanças)
-
-5. `generator.py`
-   - Integrar referência ao pipeline
-
-   Fornece o codigo completo de novos scripts caso seja necessário cria-los.
-
----
-
-## 13. RESUMO FINAL
-
-Você deve:
-
-- ✅ Adicionar suporte a áudio de referência (.wav)
-- ✅ Implementar Audio-RAG real
-- ✅ Melhorar coerência musical
-- ✅ Manter estabilidade do sistema atual
-- ❌ NÃO quebrar funcionalidades existentes
-
----
-
-## 14. RESULTADO ESPERADO
-
-O sistema deve evoluir de:
-
-> "Gerador baseado em prompt"
-
-Para:
-
-> "Sistema inteligente guiado por referência sonora + prompt"
-
----
-
-**Gere agora o código completo, modular e pronto para produção, seguindo rigorosamente essas diretrizes.**
+## 🎯 Definição de Concluído
+
+- A interface Gradio permite o upload opcional de um arquivo `.wav`.
+- O sistema funciona corretamente com e sem um áudio de referência.
+- O pipeline extrai embeddings do áudio de referência e os utiliza para guiar a geração.
+- A música gerada possui uma identidade sonora consistente e alinhada com a referência.
+- O log da interface informa o usuário sobre as etapas do Audio-RAG e o tempo total de processamento.
+- As alterações são incrementais e não quebram a funcionalidade existente.

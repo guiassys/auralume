@@ -1,111 +1,36 @@
-# Prompt para Refatoração em Pipeline com LangChain
+> Este prompt herda todas as diretrizes e restrições do template principal: `@/docs/ai_agent/OLLAMA.md`.
 
-Você é um engenheiro de software especialista em Python, IA generativa e pipelines com LangChain.
+# 🚀 Refatoração de Script para Pipeline de Geração de Música
 
-Sua tarefa é refatorar um script Python já existente e funcional, localizado no diretório: C:\devtools\repo\auralume\src\scripts
+## 🌍 Contexto
 
-Essa aplicação utiliza modelos da Hugging Face para gerar músicas. O objetivo é melhorar o desempenho e organizar o processo em um pipeline estruturado, sem quebrar a funcionalidade atual.
+- **Arquivo Alvo**: O script Python funcional, porém lento e monolítico, localizado em `src/scripts/generate_lofi_ai.py`.
+- **Funcionalidade Atual**: O script gera música usando modelos da Hugging Face a partir de inputs do usuário (`nome_da_musica`, `duracao`, `prompt`).
+- **Problema**: A execução é lenta e a estrutura do código dificulta a manutenção e reutilização.
 
----
+## 🎯 Objetivo Principal
 
-## CONTEXTO
-
-O código atual:
-
-- Já funciona corretamente  
-- Gera música a partir do comando: python -m src.scripts.generate_lofi_ai e inputs do usuário  
-- Está lento e monolítico (processo único)
+Refatorar o script `generate_lofi_ai.py` para um pipeline modular e performático utilizando LangChain, sem alterar a funcionalidade principal. O foco é melhorar a organização, performance e reutilização das etapas.
 
 ---
 
-## OBJETIVO
+## 🚀 Plano de Implementação
 
-Transformar o processo em um pipeline modular utilizando LangChain, mantendo compatibilidade com o comportamento atual, mas melhorando:
+A arquitetura do novo pipeline deve ser dividida em quatro etapas sequenciais, implementadas como `Chains` independentes no LangChain:
 
-- Performance  
-- Organização  
-- Reutilização de etapas  
+1.  **Geração de Melodia**: Cria a estrutura melódica base da música.
+2.  **Criação da Base Rítmica**: Define o ritmo, as batidas e o BPM.
+3.  **Adição da Faixa Instrumental**: Combina melodia, ritmo e o estilo musical definido no `prompt`.
+4.  **Mixagem e Masterização**: Realiza o ajuste final e o refinamento da faixa de áudio.
 
----
-
-## ENTRADAS DO SISTEMA
-
-O pipeline deve continuar aceitando exatamente os seguintes inputs:
-
-- `nome_da_musica` (string)  
-- `duracao` (int ou float)  
-- `prompt` (string com estilo musical, ex: "hip hop", "lo-fi", "rock")  
+👉 **Mandato de Execução**: Conforme o template principal, sua primeira resposta deve ser a **Proposta de Arquitetura** detalhando como você pretende estruturar este pipeline com LangChain. Aguarde a confirmação antes de gerar o código.
 
 ---
 
-## REQUISITOS IMPORTANTES
+## 🎯 Definição de Concluído
 
-- NÃO quebrar o funcionamento atual  
-- Manter compatibilidade com o modelo Hugging Face já utilizado  
-- Evitar mudanças desnecessárias na lógica existente  
-- Melhorar performance (ex: paralelismo, execução assíncrona ou otimização de chamadas)  
-- Código limpo, modular e bem organizado  
-
----
-
-## NOVA ARQUITETURA (PIPELINE)
-
-O processo deve ser dividido nas seguintes etapas:
-
-### 1. Melodia musical
-Responsável por gerar a estrutura melódica base  
-
-### 2. Base rítmica
-Define ritmo, batidas e BPM  
-
-### 3. Faixa instrumental
-Combina melodia + ritmo + estilo  
-
-### 4. Mixagem
-Ajuste final e refinamento da música  
-
----
-
-## INSTRUÇÕES DE IMPLEMENTAÇÃO
-
-- Usar LangChain (Chains ou SequentialChain)  
-- Cada etapa deve ser uma função ou chain independente  
-- Permitir fácil extensão futura  
-- Se possível, aplicar paralelismo onde fizer sentido  
-- Evitar recomputações desnecessárias  
-- Reaproveitar resultados intermediários  
-
----
-
-## SAÍDA ESPERADA
-
-Forneça:
-
-1. Código completo em Python  
-2. Estrutura modular clara  
-3. Pipeline usando LangChain  
-4. Comentários explicando cada etapa  
-5. Sugestões opcionais de otimização (ex: caching, async, batch)  
-
----
-
-## IMPORTANTE
-
-- NÃO reescreva tudo do zero se não for necessário  
-- Preserve a lógica existente sempre que possível  
-- Foque em refatoração e organização em pipeline  
-
----
-
-## EXTRA (SE POSSÍVEL)
-
-- Adicionar logging básico  
-- Mostrar como executar o pipeline com um exemplo  
-
----
-
-## RESULTADO FINAL
-
-O código deve ser completo, funcional e pronto para uso, mantendo compatibilidade com o sistema atual e melhorando desempenho e organização.
-
-**Gere o código completo e funcional.**
+- O pipeline em LangChain está implementado e substitui a lógica do script monolítico.
+- A funcionalidade de geração de música continua operando com os mesmos inputs e produzindo um resultado equivalente.
+- O novo código está modular, com cada etapa do pipeline claramente definida.
+- Um exemplo de como executar o novo pipeline é fornecido.
+- Logging básico foi adicionado para monitorar a execução de cada etapa.
