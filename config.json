@@ -8,22 +8,34 @@
         "music box", "box drum", "mallets", "vibraphone", "kalimba", "strings",
         "string ensemble", "lofi strings", "flute", "saxophone", "trumpet", "clarinet",
         "field recordings", "rain sounds", "city ambience", "cassette noise",
-        "vinyl crackle", "fx textures", "glass harmonica"
+        "vinyl crackle", "fx textures", "glass harmonica", "cajon"
     ],
-    "default_instruments": ["acoustic bass", "acoustic guitar"],
+    "default_instruments": ["rhodes", "lofi drums", "electric bass", "vinyl crackle", "ambient pads"],
     "generator_settings": {
-        "bpm": 85,
+        "embedding_size": 128,
         "key": "C minor",
-        "output_dir": "outputs",
+        "output_dir": "C:\\ASSETS\\Apexlone\\Aelion\\Album_Fragments_of_Silence\\03_GENERATED\\audio",
         "output_sufix": "v01_gen",
-        "chunk_duration": 10,
-        "overlap_duration": 2,
+        "chunk_duration_s": 20,
+        "use_continuation": true,
+        "continuation_primer_s": 5,
         "fade_in_duration": 1,
-        "fade_out_duration": 1,
-        "model_size": "medium",
+        "fade_out_duration": 2,
+        "default_model_size": "medium",
+        "model_sizes": ["small", "medium", "large"],
+        "quantization": "8bit",
         "sample_rate": 32000,
         "max_new_tokens": 1500,
-        "temperature": 1.0
+        "temperature": 0.90
+    },
+    "architect_settings": {
+        "bpm_range": [65, 80],
+        "structure": [
+            {"name": "intro", "ratio": 0.15, "desc": "soft textures, vinyl noise"},
+            {"name": "main_loop", "ratio": 0.55, "desc": "steady groove, mellow chords, simple melody"},
+            {"name": "variation", "ratio": 0.2, "desc": "subtle changes, melodic variation"},
+            {"name": "outro", "ratio": 0.1, "desc": "elements gradually fade, filtered ending"}
+        ]
     },
     "ui_settings": {
         "keys": ["C minor", "A minor", "D major", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"],
@@ -33,7 +45,52 @@
             "min": 30,
             "max": 300,
             "step": 10,
-            "default": 60
+            "default": 180
+        },
+        "bpm_range": {
+            "min": 40,
+            "max": 200,
+            "step": 1
+        },
+        "temperature": {
+            "min": 0.1,
+            "max": 2.0,
+            "step": 0.05
+        },
+        "max_new_tokens": {
+            "min": 256,
+            "max": 4096,
+            "step": 128
+        },
+        "embedding_size": {
+            "min": 32,
+            "max": 512,
+            "step": 16
+        },
+        "chunk_duration_s": {
+            "min": 5,
+            "max": 30,
+            "step": 1
+        },
+        "continuation_primer_s": {
+            "min": 1,
+            "max": 10,
+            "step": 0.5
+        },
+        "fade_in_duration": {
+            "min": 0,
+            "max": 5,
+            "step": 0.5
+        },
+        "fade_out_duration": {
+            "min": 0,
+            "max": 5,
+            "step": 0.5
         }
+    },
+    "server_settings": {
+        "server_name": "0.0.0.0",
+        "server_port": 7860,
+        "show_error": true
     }
 }

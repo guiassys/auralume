@@ -1,93 +1,95 @@
 """
-Custom Gradio theme for Auralith to match a professional DAW's dark, industrial aesthetic.
+Custom Gradio theme for Auralume to match a professional DAW's aesthetic.
+Using a softer, lighter theme as requested.
 """
 import gradio as gr
 from gradio.themes.base import Base
 from gradio.themes.utils import colors, fonts, sizes
 
-class AuralithTheme(Base):
+class AuralumeTheme(Base):
     def __init__(self):
         super().__init__(
-            primary_hue=colors.blue,
-            secondary_hue=colors.gray,
-            neutral_hue=colors.gray,
+            primary_hue=colors.indigo,
+            secondary_hue=colors.slate,
+            neutral_hue=colors.slate,
             spacing_size=sizes.spacing_md,
             radius_size=sizes.radius_md,
             font=fonts.GoogleFont("Inter"),
         )
-        self.name = "auralith_theme"
+        self.name = "auralume_theme"
         self.set(
-            # Colors
-            body_background_fill="*neutral_950",
-            body_background_fill_dark="*neutral_950",
-            body_text_color="*neutral_50",
-            body_text_color_dark="*neutral_50",
+            # Colors - Soft Light Theme
+            body_background_fill="*neutral_50",
+            body_text_color="*neutral_800",
 
-            background_fill_primary="*neutral_900",
-            background_fill_primary_dark="*neutral_900",
-            background_fill_secondary="*neutral_800",
-            background_fill_secondary_dark="*neutral_800",
+            background_fill_primary="white",
+            background_fill_secondary="*neutral_100",
 
             border_color_accent="*primary_500",
-            border_color_accent_dark="*primary_500",
-            border_color_primary="*neutral_700",
-            border_color_primary_dark="*neutral_700",
+            border_color_primary="*neutral_200",
 
-            color_accent_soft="*primary_800",
-            color_accent_soft_dark="*primary_800",
+            color_accent_soft="*primary_100",
 
             # Component-specific overrides
-            button_primary_background_fill="*primary_600",
-            button_primary_background_fill_dark="*primary_600",
+            button_primary_background_fill="*primary_500",
             button_primary_text_color="white",
-            button_primary_text_color_dark="white",
             
-            button_secondary_background_fill="*neutral_700",
-            button_secondary_background_fill_dark="*neutral_700",
-            button_secondary_text_color="white",
-            button_secondary_text_color_dark="white",
+            button_secondary_background_fill="white",
+            button_secondary_text_color="*neutral_800",
 
             slider_color="*primary_500",
-            slider_color_dark="*primary_500",
 
             # Input fields
-            input_background_fill="*neutral_800",
-            input_background_fill_dark="*neutral_800",
-            input_border_color="*neutral_700",
-            input_border_color_dark="*neutral_700",
+            input_background_fill="white",
+            input_border_color="*neutral_300",
             input_placeholder_color="*neutral_400",
-            input_placeholder_color_dark="*neutral_400",
         )
 
-auralith_theme = AuralithTheme()
+auralume_theme = AuralumeTheme()
 
 custom_css = """
 /* --- Global Input Text Color --- */
 .gradio-container .gr-input, .gradio-container .gr-textarea, .gradio-container .gr-dropdown {
-    color: #ffffff !important; /* White text for all inputs */
+    color: #1e293b !important; /* Dark text for all inputs in light mode */
 }
 
 .terminal-box textarea {
-    background-color: #0b0f14 !important;
-    color: #00ff41 !important; /* Neon Green */
+    background-color: #f1f5f9 !important;
+    color: #334155 !important; /* Dark slate */
     font-family: 'Courier New', monospace !important;
-    border: 1px solid #182848 !important;
+    border: 1px solid #cbd5e1 !important;
 }
 .main-header {
     text-align: center;
     margin-bottom: 20px;
     font-size: 2.5em;
-    color: #ffffff;
+    color: #1e293b;
     font-weight: bold;
 }
-/* Correctly target the slider's track fill for the progress bar effect */
-.glowing-progress .track-fill {
-    background-color: #00ff41 !important; /* Neon Green */
-    box-shadow: 0 0 5px #00ff41, 0 0 10px #00ff41;
+
+/* --- Pipeline Container Alignment --- */
+#pipeline-container {
+    align-items: center !important;
 }
 
 /* Remove background from instrument checkboxes */
 .gradio-container .gr-checkboxgroup .gr-checkbox-label {
     background-color: transparent !important;
+}
+
+/* --- Compact Progress Indicator --- */
+.gradio-container .compact {
+    min-height: 0 !important;
+    height: var(--size-8) !important; /* Match button height */
+    padding: 0 !important;
+}
+
+.gradio-container .progress-indicator textarea {
+    border: none !important;
+    background-color: transparent !important;
+    text-align: left !important;
+    padding: 0 !important;
+    line-height: var(--size-8) !important; /* Vertically center text */
+    color: var(--body-text-color) !important;
 }
 """

@@ -1,6 +1,6 @@
-# Auralith - Pipeline de Geração Musical
+# Auralume - Pipeline de Geração Musical
 
-Este README descreve o fluxo de geração de música no diretório `src` do projeto Auralith.
+Este README descreve o fluxo de geração de música no diretório `src` do projeto Auralume.
 
 ## O que há aqui
 
@@ -22,7 +22,7 @@ Este README descreve o fluxo de geração de música no diretório `src` do proj
 ### Via Terminal
 1. Ative o ambiente virtual do projeto:
 ```powershell
-cd c:\devtools\repo\auralith
+cd c:\devtools\repo\auralume
 .\musicgen310\Scripts\Activate.ps1
 ```
 
@@ -44,7 +44,7 @@ python src/web/run_web.py
 
 3. Acesse: http://localhost:7860
 
-**Importante:** Execute sempre a partir do diretório raiz do projeto (`auralith/`) para que os imports Python funcionem corretamente.
+**Importante:** Execute sempre a partir do diretório raiz do projeto (`auralume/`) para que os imports Python funcionem corretamente.
 
 ## Arquitetura do pipeline
 
@@ -79,12 +79,4 @@ A geração musical usa um pipeline modular para transformar o prompt inicial em
 - A engine atual usa chunks de 30 segundos para gerar áudio de forma incremental.
 - A interface Web reutiliza o pipeline sem modificá-lo.
 
-## Exemplo de uso rápido
-
-```python
-from src.scripts.generator import LofiGenerator
-
-gen = LofiGenerator()
-path = gen.generate(prompt="hip hop chill, piano suave", duration=60, name="minha_musica")
-print(path)
 ```
