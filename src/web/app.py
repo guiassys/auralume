@@ -63,7 +63,14 @@ def create_ui():
         # --- Header ---
         with gr.Row(elem_classes=["header"]):
             gr.Markdown("## 🎹 Auralume", elem_id="logo")
-        
+
+        pipeline_type_input = gr.Radio(
+            label="Pipeline Type",
+            choices=["Simple", "Advanced"],
+            value="Simple",
+            elem_id="pipeline-selector"
+        )
+
         with gr.Row():
             # --- Main Workspace ---
             with gr.Column(scale=5):
@@ -72,36 +79,41 @@ def create_ui():
                     with gr.TabItem("🎵 Track Definitions", id=0):
                         with gr.Group():
                             prompt_input = gr.Textbox(label="Style Prompt", placeholder="e.g., lofi, chill, synthwave, 80s", lines=3)
+                            model_size_input = gr.Dropdown(
+                                label="Model Size",
+                                choices=SETTINGS["generator_settings"]["model_sizes"],
+                                value=SETTINGS["generator_settings"]["default_model_size"]
+                            )
 
-                        with gr.Row():
+                        with gr.Row(visible=False) as advanced_row_1:
                             bpm_min_input = gr.Slider(label="Min BPM", minimum=SETTINGS["ui_settings"]["bpm_range"]["min"], maximum=SETTINGS["ui_settings"]["bpm_range"]["max"], value=SETTINGS["architect_settings"]["bpm_range"][0], step=SETTINGS["ui_settings"]["bpm_range"]["step"])
                             bpm_max_input = gr.Slider(label="Max BPM", minimum=SETTINGS["ui_settings"]["bpm_range"]["min"], maximum=SETTINGS["ui_settings"]["bpm_range"]["max"], value=SETTINGS["architect_settings"]["bpm_range"][1], step=SETTINGS["ui_settings"]["bpm_range"]["step"])
                             duration_input = gr.Slider(
-                                label="Duration (s)", 
-                                minimum=SETTINGS["ui_settings"]["duration"]["min"], 
-                                maximum=SETTINGS["ui_settings"]["duration"]["max"], 
-                                step=SETTINGS["ui_settings"]["duration"]["step"], 
+                                label="Duration (s)",
+                                minimum=SETTINGS["ui_settings"]["duration"]["min"],
+                                maximum=SETTINGS["ui_settings"]["duration"]["max"],
+                                step=SETTINGS["ui_settings"]["duration"]["step"],
                                 value=SETTINGS["ui_settings"]["duration"]["default"]
                             )
-                        with gr.Row():
+                        with gr.Row(visible=False) as advanced_row_2:
                             key_input = gr.Dropdown(label="Key", choices=SETTINGS["ui_settings"]["keys"], value=SETTINGS["generator_settings"]["key"])
                             genre_input = gr.Dropdown(label="Genre", choices=SETTINGS["ui_settings"]["genres"], value=SETTINGS["ui_settings"]["genres"][0] if SETTINGS["ui_settings"]["genres"] else None)
                             mood_input = gr.Dropdown(label="Mood", choices=SETTINGS["ui_settings"]["moods"], value=SETTINGS["ui_settings"]["moods"][0] if SETTINGS["ui_settings"]["moods"] else None)
-                        
-                        with gr.Accordion("Music Structure", open=False):
+
+                        with gr.Accordion("Music Structure", open=False, visible=False) as advanced_accordion_1:
                             structure_input = gr.Textbox(
                                 label="Structure (JSON format)",
                                 value=json.dumps(SETTINGS["architect_settings"]["structure"], indent=4),
                                 lines=8,
                                 elem_id="json-input",
-                                interactive=True # Fixed: Explicitly made it interactive
+                                interactive=True
                             )
-                        
-                        with gr.Accordion("Instruments", open=False):
+
+                        with gr.Accordion("Instruments", open=False, visible=False) as advanced_accordion_2:
                             instruments_input = gr.CheckboxGroup(label="Instruments", choices=SETTINGS["instruments"], value=SETTINGS["default_instruments"])
 
                     # --- Tab 2: Settings ---
-                    with gr.TabItem("⚙️ Settings", id=1):
+                    with gr.TabItem("⚙️ Settings", id=1, visible=False) as settings_tab:
                         with gr.Group():
                             gr.Markdown("#### File & Output")
                             with gr.Row():
@@ -116,7 +128,6 @@ def create_ui():
                         with gr.Group():
                             gr.Markdown("#### Advanced Model Settings")
                             with gr.Row():
-                                model_size_input = gr.Dropdown(label="Model Size", choices=["small", "medium", "large"], value=SETTINGS["generator_settings"]["model_size"])
                                 quantization_input = gr.Dropdown(label="Quantization", choices=["none", "8bit", "4bit"], value=SETTINGS["generator_settings"]["quantization"])
                                 max_new_tokens_input = gr.Slider(label="Max New Tokens", minimum=SETTINGS["ui_settings"]["max_new_tokens"]["min"], maximum=SETTINGS["ui_settings"]["max_new_tokens"]["max"], value=SETTINGS["generator_settings"]["max_new_tokens"], step=SETTINGS["ui_settings"]["max_new_tokens"]["step"])
                                 embedding_size_input = gr.Slider(
@@ -126,7 +137,7 @@ def create_ui():
                                     value=SETTINGS["generator_settings"]["embedding_size"],
                                     step=SETTINGS["ui_settings"]["embedding_size"]["step"]
                                 )
-                        with gr.Group():
+                        with gr.Group(visible=False) as advanced_group_1:
                             gr.Markdown("#### Audio Processing")
                             with gr.Row():
                                 chunk_duration_input = gr.Slider(label="Chunk Duration (s)", minimum=SETTINGS["ui_settings"]["chunk_duration_s"]["min"], maximum=SETTINGS["ui_settings"]["chunk_duration_s"]["max"], value=SETTINGS["generator_settings"]["chunk_duration_s"], step=SETTINGS["ui_settings"]["chunk_duration_s"]["step"])
@@ -145,11 +156,33 @@ def create_ui():
             # --- Sidebar ---
             with gr.Column(scale=1, min_width=100):
                 gr.Markdown("### ⚡ Actions")
-                
+
                 with gr.Column():
                     clear_btn = gr.Button("🗑️ Clear Inputs")
                     generate_btn = gr.Button("🚀 GENERATE", variant="primary")
                     progress_bar = gr.Slider(label="Rendering Progress", value=0, interactive=False, elem_classes=["glowing-progress"], visible=False)
+
+        # --- UI Interaction Logic ---
+        def toggle_pipeline_view(pipeline_type: str):
+            is_simple = pipeline_type == "Simple"
+            visibility = {"visible": not is_simple}
+            return {
+                advanced_row_1: gr.update(**visibility),
+                advanced_row_2: gr.update(**visibility),
+                advanced_accordion_1: gr.update(**visibility),
+                advanced_accordion_2: gr.update(**visibility),
+                settings_tab: gr.update(visible=not is_simple),
+                advanced_group_1: gr.update(**visibility),
+            }
+
+        pipeline_type_input.change(
+            fn=toggle_pipeline_view,
+            inputs=[pipeline_type_input],
+            outputs=[
+                advanced_row_1, advanced_row_2, advanced_accordion_1,
+                advanced_accordion_2, settings_tab, advanced_group_1
+            ]
+        )
 
         # --- Helper Functions (Scoped within create_ui) ---
         def _validate_inputs(prompt: str) -> Optional[str]:
@@ -158,25 +191,26 @@ def create_ui():
             return None
 
         def _build_generation_config(*args) -> Dict[str, Any]:
-            (duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
+            (pipeline_type, duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
              embedding_size, output_dir, output_sufix, audio_format, generate_midi,
              temperature, model_size, quantization, max_new_tokens, chunk_duration, continuation_primer,
              fade_in, fade_out, structure_json) = args
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             name = f"{timestamp}_{output_sufix}"
-            
+
             try:
                 structure = json.loads(structure_json)
             except:
                 structure = SETTINGS["architect_settings"]["structure"]
-                
+
             return {
+                "pipeline_type": pipeline_type,
                 "name": name, "duration": duration, "prompt": prompt, "genre": genre, "vibe": mood,
                 "instruments": instruments, "bpm_range": [bpm_min, bpm_max], "key": key,
                 "structure": structure,
                 "embedding_size": embedding_size, "output_dir": output_dir,
                 "audio_format": audio_format, "generate_midi": generate_midi, "temperature": temperature,
-                "model_size": model_size, "quantization": quantization, "max_new_tokens": max_new_tokens, 
+                "model_size": model_size, "quantization": quantization, "max_new_tokens": max_new_tokens,
                 "chunk_duration_s": chunk_duration, "continuation_primer_s": continuation_primer,
                 "fade_in_duration": fade_in, "fade_out_duration": fade_out
             }
@@ -220,7 +254,7 @@ def create_ui():
 
         # --- Main Event Handler ---
         def run_generation(
-            duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
+            pipeline_type, duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
             embedding_size,
             output_dir, output_sufix, audio_format, generate_midi, temperature, model_size, quantization, max_new_tokens,
             chunk_duration, continuation_primer, fade_in, fade_out, structure_json
@@ -234,7 +268,7 @@ def create_ui():
             yield _ui_start_generation()
 
             config_args = (
-                duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
+                pipeline_type, duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
                 embedding_size, output_dir, output_sufix, audio_format, generate_midi,
                 temperature, model_size, quantization, max_new_tokens, chunk_duration, continuation_primer,
                 fade_in, fade_out, structure_json
@@ -280,12 +314,13 @@ def create_ui():
 
         # --- Event Binding ---
         all_inputs = [
+            pipeline_type_input,
             duration_input, prompt_input, genre_input, mood_input, instruments_input, bpm_min_input, bpm_max_input, key_input,
             embedding_size_input,
             output_dir_input, output_sufix_input, audio_format_input, generate_midi_input, temperature_input, model_size_input, quantization_input, max_new_tokens_input,
             chunk_duration_input, continuation_primer_input, fade_in_input, fade_out_input, structure_input
         ]
-        
+
         all_outputs = [
             tabs, status_output, generate_btn, clear_btn, progress_bar, file_output, audio_preview
         ]
@@ -309,7 +344,7 @@ def create_ui():
                 audio_format_input: ".wav",
                 generate_midi_input: False,
                 temperature_input: SETTINGS["generator_settings"]["temperature"],
-                model_size_input: SETTINGS["generator_settings"]["model_size"],
+                model_size_input: SETTINGS["generator_settings"]["default_model_size"],
                 quantization_input: SETTINGS["generator_settings"]["quantization"],
                 max_new_tokens_input: SETTINGS["generator_settings"]["max_new_tokens"],
                 chunk_duration_input: SETTINGS["generator_settings"]["chunk_duration_s"],
@@ -323,9 +358,9 @@ def create_ui():
             }
 
         clear_outputs = [
-            prompt_input, duration_input, genre_input, mood_input, instruments_input, 
+            prompt_input, duration_input, genre_input, mood_input, instruments_input,
             bpm_min_input, bpm_max_input, key_input, structure_input, embedding_size_input,
-            output_dir_input, output_sufix_input, audio_format_input, generate_midi_input, 
+            output_dir_input, output_sufix_input, audio_format_input, generate_midi_input,
             temperature_input, model_size_input, quantization_input, max_new_tokens_input,
             chunk_duration_input, continuation_primer_input, fade_in_input, fade_out_input,
             status_output, file_output, audio_preview, progress_bar
@@ -340,10 +375,10 @@ interface = create_ui()
 # --- Main Execution ---
 if __name__ == "__main__":
     server_settings = SETTINGS.get("server_settings", {})
-    
+
     output_dir_raw = SETTINGS.get("generator_settings", {}).get("output_dir", "outputs")
     allowed_path = _convert_path_for_wsl(output_dir_raw)
-    
+
     interface.launch(
         server_name=server_settings.get("server_name", "127.0.0.1"),
         server_port=server_settings.get("server_port", 7860),

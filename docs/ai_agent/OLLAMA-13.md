@@ -1,66 +1,68 @@
 > Este prompt herda todas as diretrizes e restrições do template principal: `@/docs/ai_agent/OLLAMA.md`.
 
-# 🚀 Implementação de Seleção de Pipeline (Simples/Avançado) e Tamanho do Modelo
+# 🚀 Evolução da Plataforma para Suportar Múltiplos Modos de Geração Musical
 
 ## 🌍 Contexto
 
-- **Aplicação Alvo**: A interface web com Gradio e o backend de geração de música.
-- **Problema**: A interface atual, embora poderosa, pode ser complexa para usuários que desejam uma geração rápida baseada apenas em um prompt de estilo. Além disso, o tamanho do modelo de IA é um parâmetro fixo no `config.json`, sem controle direto pelo usuário.
-- **Necessidade**: Introduzir um fluxo de geração "Simples" que exija apenas um prompt, e ao mesmo tempo, dar aos usuários do fluxo "Avançado" o controle sobre o tamanho do modelo a ser utilizado.
+- **Aplicação Alvo**: Plataforma de geração de música Auralume.
+- **Problema de Negócio**: A plataforma atual oferece um único modo de geração "Avançado", que, embora poderoso, é complexo para usuários iniciantes. Além disso, não há flexibilidade para o usuário escolher a performance do modelo de IA, impactando a experiência de uso.
+- **Necessidade Estratégica**: Para ampliar a base de usuários e melhorar a experiência, precisamos introduzir um modo de geração "Simples" e permitir que os usuários selecionem o modelo de IA que melhor se adapta às suas necessidades de velocidade e qualidade.
 
 ## 🎯 Objetivo Principal
 
-Implementar duas novas funcionalidades na interface e no backend:
-1.  **Seleção de Tamanho do Modelo**: Permitir que o usuário escolha o tamanho do modelo de IA (ex: "small", "medium", "large") a ser usado no processo de geração.
-2.  **Seleção de Tipo de Pipeline**: Oferecer uma opção entre um fluxo "Avançado" (o comportamento atual, com todos os parâmetros) e um "Simples", que oculta todos os campos exceto o "Style Prompt" e utiliza um pipeline de backend simplificado.
+Evoluir a plataforma Auralume para se tornar um sistema modular de geração musical, implementando duas novas features de alto valor para o usuário:
+
+1.  **Modo de Geração "Simples"**: Oferecer uma experiência de "um clique" onde o usuário insere apenas uma ideia (prompt) e recebe uma música curta e de alta qualidade, ideal para loops e experimentação rápida.
+2.  **Seleção de Performance do Modelo**: Permitir que o usuário escolha o "tamanho" do modelo de IA (ex: "Pequeno", "Médio", "Grande"), balanceando entre velocidade de geração e complexidade musical.
+
+---
+
+## 💡 Diretriz Arquitetural: Pipelines como Plugins
+
+A implementação desta e de futuras funcionalidades de geração deve seguir um modelo de **arquitetura de pipelines modulares**.
+
+- **Visão**: Cada "modo de geração" (como "Simples" e "Avançado") deve ser tratado como um **plugin independente e autônomo**.
+- **Isolamento**: Cada pipeline é uma feature completa e isolada. Ele define seus próprios parâmetros, seu próprio fluxo de geração e não deve ter conhecimento ou dependência de outros pipelines.
+- **Orquestração Central**: O sistema principal (`MusicGenerationService`) atuará como um **orquestrador**. Sua única responsabilidade é identificar qual pipeline o usuário selecionou e rotear a solicitação para o plugin correto.
+- **Configuração Centralizada**: Todos os parâmetros configuráveis para **todos** os pipelines devem ser definidos no arquivo `/config.json`, permitindo fácil ajuste e manutenção a partir de uma única tela de "Settings".
+
+Esta abordagem garante que a plataforma seja **escalável**, permitindo que novos modos de geração (ex: "Geração por Acordes", "Remix de Áudio") sejam adicionados no futuro como novos plugins, sem impactar as funcionalidades existentes.
 
 ---
 
 ## 🚀 Plano de Implementação
 
-### Fase 1: Implementação do Seletor de Tamanho do Modelo
+### Fase 1: Implementação do Pipeline "Simples" como um Plugin
 
-1.  **Interface (Frontend)**:
-    - Na aba "Configurações", adicionar um componente `gr.Dropdown` com o rótulo "Tamanho do modelo".
-    - As opções para este dropdown devem ser carregadas do `config.json` (ex: `["small", "medium", "large"]`).
-    - O valor padrão selecionado deve ser o `model_size` definido no `config.json`.
+1.  **Interface do Usuário (UI)**:
+    - No topo da tela, adicionar um seletor de "Modo de Geração" com as opções: `["Simples", "Avançado"]`.
+    - O modo "Simples" deve ser o **padrão**.
+    - Ao selecionar "Simples", a interface deve ser minimalista, exibindo apenas os controles essenciais: o campo de prompt e o seletor de tamanho do modelo. Todos os outros controles avançados devem ser ocultados.
+    - Ao selecionar "Avançado", a interface deve reexibir todos os controles, restaurando a experiência completa.
 
-2.  **Backend**:
-    - O valor selecionado para o tamanho do modelo deve ser passado através da camada de serviço até o `MusicGenEngine`.
-    - Modificar o método `load_model()` no `MusicGenEngine` para que ele use o parâmetro `model_size` recebido para carregar a versão correta do modelo do Hugging Face.
+2.  **Backend (Orquestração e Plugin)**:
+    - O Orquestrador (`MusicGenerationService`) receberá a escolha do usuário e ativará o pipeline correspondente.
+    - Criar o novo plugin `SimpleMusicPipeline`, que será responsável por:
+        - Receber o prompt do usuário.
+        - Gerar uma única faixa de música de 30 segundos, otimizada para ser usada como um loop contínuo (sem fade-out).
+        - Utilizar o modelo de IA e a configuração de performance (quantização) selecionados pelo usuário para garantir a melhor experiência em seu hardware.
 
-### Fase 2: Implementação da Seleção de Tipo de Pipeline (Simples/Avançado)
+### Fase 2: Implementação da Seleção de Performance do Modelo
 
-1.  **Interface (Frontend)**:
-    - Adicionar um componente `gr.Radio` no topo da interface com o rótulo "Tipo de pipeline" e as opções: `["Simples", "Avançado"]`. O padrão deve ser "Avançado".
-    - **Lógica de Interatividade**:
-        - Implementar um gatilho (`.change()`) para este componente de rádio.
-        - Se o usuário selecionar **"Simples"**, a função do gatilho deve usar `gr.update(visible=False)` para ocultar todos os outros componentes de entrada do formulário (duração, nome da música, etc.) e as abas de configuração, deixando visível apenas o campo "Style Prompt" e o botão "Gerar".
-        - Se o usuário selecionar **"Avançado"**, a função deve usar `gr.update(visible=True)` para reexibir todos os componentes ocultos.
+1.  **Interface do Usuário (UI)**:
+    - Na área principal (visível em ambos os modos), adicionar um seletor de "Tamanho do Modelo".
+    - As opções (`["small", "medium", "large"]`) e o valor padrão devem ser carregados do `/config.json`.
 
-2.  **Backend**:
-    - **Roteamento no Serviço**: A função principal no `MusicGenerationService` receberá o novo parâmetro `pipeline_type`. Ela atuará como um roteador:
-        - Se `pipeline_type` for "Avançado", ela chamará o `MusicPipeline` existente, como faz atualmente.
-        - Se `pipeline_type` for "Simples", ela chamará um novo **Pipeline Simplificado**.
-    - **Criação do Pipeline Simplificado**:
-        - Criar um novo fluxo ou classe (ex: `SimpleMusicPipeline`).
-        - Este pipeline receberá apenas o prompt de texto.
-        - Ele irá gerar uma única faixa de curta duração (ex: 30 segundos), sem a complexidade de estrutura (intro/verso/refrão) ou continuação de áudio.
-        - Essencialmente, ele fará uma única chamada ao `MusicGenEngine` com o prompt e salvará o resultado.
-
-👉 **Mandato de Execução**: Conforme o template principal, sua primeira resposta deve ser a **Proposta de Arquitetura**, detalhando:
-1.  A lógica de interatividade no Gradio para ocultar/mostrar os campos.
-2.  A estrutura do novo Pipeline Simplificado.
-3.  Como o `MusicGenerationService` fará o roteamento entre os dois pipelines.
-Aguarde a confirmação antes de gerar o código.
+2.  **Backend (Motor de IA)**:
+    - O motor de IA (`MusicGenEngine`) deve ser capaz de carregar e descarregar modelos dinamicamente com base na seleção do usuário, incluindo o tamanho e a configuração de performance (quantização), para otimizar o uso de hardware (CPU/GPU).
 
 ---
 
 ## 🎯 Definição de Concluído
 
-- Um seletor para "Tamanho do modelo" existe na UI e o valor escolhido é usado pelo backend.
-- Um seletor para "Tipo de pipeline" está presente na UI.
-- Ao selecionar "Simples", a UI é simplificada, mostrando apenas o campo de prompt.
-- O fluxo "Simples" utiliza um pipeline de backend simplificado e gera música com sucesso.
-- O fluxo "Avançado" continua funcionando exatamente como antes, sem nenhuma regressão.
-- O comportamento padrão da aplicação ao iniciar é o fluxo "Avançado" com todos os campos visíveis.
+- A aplicação inicia no modo "Simples" por padrão, com uma interface limpa.
+- O usuário pode alternar para o modo "Avançado", que restaura todas as funcionalidades anteriores sem regressão.
+- O modo "Simples" gera uma música de 30 segundos, com alta qualidade, que respeita a intenção do prompt do usuário e pode ser usada em loop.
+- A geração no modo "Simples" é visivelmente rápida, utilizando o hardware do usuário (GPU) de forma eficiente.
+- O usuário pode selecionar o tamanho do modelo em ambos os modos, e a escolha é respeitada pelo backend, impactando a velocidade e a qualidade da geração.
+- A arquitetura de pipelines está implementada, com o `SimpleMusicPipeline` e o `MusicPipeline` (avançado) funcionando como módulos independentes orquestrados pelo `MusicGenerationService`.
