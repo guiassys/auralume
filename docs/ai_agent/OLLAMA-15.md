@@ -4,9 +4,9 @@
 
 ## 🌍 Contexto
 
-- **Aplicação Alvo**: Plataforma de geração de música Auralume.
+- **Aplicação Alvo**: Plataforma de geração de música Auratune.
 - **Problema de Negócio**: Atualmente, a geração de músicas é baseada apenas em texto (prompts) e parâmetros pré-definidos. Os usuários podem querer usar melodias, batidas ou trechos sonoros como base de inspiração (referência) para a inteligência artificial gerar a música. Além disso, identificou-se que durante a geração de áudio (especialmente de arquivos longos ou com referência), a interface de usuário deixa de atualizar a barra de progresso após um determinado ponto (ex: travando em 95% e omitindo os logs subjacentes do motor de inferência), passando uma falsa sensação de travamento.
-- **Necessidade Estratégica**: Expandir as capacidades criativas da plataforma Auralume, permitindo ao usuário fazer o upload de um arquivo de áudio para ser utilizado como referência, promovendo maior controle e precisão no resultado gerado. A implementação deve focar em estabilidade, uso eficiente do hardware de GPU e feedback visual contínuo e responsivo na interface.
+- **Necessidade Estratégica**: Expandir as capacidades criativas da plataforma Auratune, permitindo ao usuário fazer o upload de um arquivo de áudio para ser utilizado como referência, promovendo maior controle e precisão no resultado gerado. A implementação deve focar em estabilidade, uso eficiente do hardware de GPU e feedback visual contínuo e responsivo na interface.
 
 ## 🎯 Objetivo Principal
 

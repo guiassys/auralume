@@ -1,4 +1,4 @@
-# Auralume AI — Summary of Improvements
+# Auratune AI — Summary of Improvements
 
 ## 1. GPU Performance Optimization
 - **What was done:** Migrated from Windows to WSL2 (Ubuntu) to enable proper CUDA usage.

@@ -1,5 +1,5 @@
 """
-Professional Web Interface for Auralume using Gradio with a DAW-inspired,
+Professional Web Interface for Auratune using Gradio with a DAW-inspired,
 dark-themed layout and real-time log streaming.
 """
 import gradio as gr
@@ -14,7 +14,7 @@ from typing import Dict, Any, Tuple, Optional, List
 
 from src.services.music_service import MusicGenerationService
 from src.web.log_stream import LogStream
-from src.web.ui_theme import auralume_theme, custom_css
+from src.web.ui_theme import auratune_theme, custom_css
 
 # --- Logging Configuration ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -58,11 +58,11 @@ except RuntimeError as e:
 
 # --- UI DEFINITION ---
 def create_ui():
-    """Builds the Gradio Blocks UI for Auralume."""
-    with gr.Blocks(title="Auralume", theme=auralume_theme, css=custom_css) as demo:
+    """Builds the Gradio Blocks UI for Auratune."""
+    with gr.Blocks(title="Auratune", theme=auratune_theme, css=custom_css) as demo:
         # --- Header ---
         with gr.Row(elem_classes=["header"]):
-            gr.Markdown("## 🎹 Auralume", elem_id="logo")
+            gr.Markdown("## 🎹 Auratune", elem_id="logo")
 
         with gr.Row(elem_id="pipeline-container"):
             pipeline_type_input = gr.Radio(
