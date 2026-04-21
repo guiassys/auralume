@@ -1,12 +1,12 @@
 """
-Custom Gradio theme for Auralume to match a professional DAW's aesthetic.
+Custom Gradio theme for Auratune to match a professional DAW's aesthetic.
 Using a softer, lighter theme as requested.
 """
 import gradio as gr
 from gradio.themes.base import Base
 from gradio.themes.utils import colors, fonts, sizes
 
-class AuralumeTheme(Base):
+class AuratuneTheme(Base):
     def __init__(self):
         super().__init__(
             primary_hue=colors.indigo,
@@ -16,7 +16,7 @@ class AuralumeTheme(Base):
             radius_size=sizes.radius_md,
             font=fonts.GoogleFont("Inter"),
         )
-        self.name = "auralume_theme"
+        self.name = "auratune_theme"
         self.set(
             # Colors - Soft Light Theme
             body_background_fill="*neutral_50",
@@ -45,7 +45,7 @@ class AuralumeTheme(Base):
             input_placeholder_color="*neutral_400",
         )
 
-auralume_theme = AuralumeTheme()
+auratune_theme = AuratuneTheme()
 
 custom_css = """
 /* --- Global Input Text Color --- */

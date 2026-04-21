@@ -1,4 +1,4 @@
-"""Script alternativo para executar a interface Web do Auralume de qualquer diretório."""
+"""Script alternativo para executar a interface Web do Auratune de qualquer diretório."""
 
 import sys
 import os
@@ -20,7 +20,7 @@ def main():
     project_root = os.path.dirname(os.path.abspath(__file__))
 
     if not os.path.exists(os.path.join(project_root, 'src')):
-        print("❌ Erro: Execute este script a partir do diretório raiz do projeto (auralume/).")
+        print("❌ Erro: Execute este script a partir do diretório raiz do projeto (auratune/).")
         print(f"📁 Diretório atual: {project_root}")
         return
 
@@ -38,7 +38,7 @@ def main():
         output_dir_raw = SETTINGS.get("generator_settings", {}).get("output_dir", "outputs")
         allowed_path = _convert_path_for_wsl(output_dir_raw)
 
-        print("🚀 Iniciando Auralume Web...")
+        print("🚀 Iniciando Auratune Web...")
         print(f"📱 Acesse: http://{server_name}:{server_port}")
         print("❌ Pressione Ctrl+C para parar")
 

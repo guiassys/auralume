@@ -59,13 +59,20 @@ class MusicGenEngine:
             self.config.model_size = model_size
             self.config.quantization = quantization
             
+            torch_dtype = torch.float16 if self.device.type == "cuda" else torch.float32
+            
             quantization_config = None
             if self.config.quantization == "8bit":
-                quantization_config = BitsAndBytesConfig(load_in_8bit=True)
+                quantization_config = BitsAndBytesConfig(
+                    load_in_8bit=True,
+                )
                 log.info("Applying 8-bit quantization.")
             elif self.config.quantization == "4bit":
-                quantization_config = BitsAndBytesConfig(load_in_4bit=True)
-                log.info("Applying 4-bit quantization.")
+                quantization_config = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_compute_dtype=torch_dtype,
+                )
+                log.info(f"Applying 4-bit quantization with compute dtype {torch_dtype}.")
 
             self.processor = AutoProcessor.from_pretrained(self.config.model_name)
             
@@ -79,9 +86,9 @@ class MusicGenEngine:
                     self.config.model_name,
                     quantization_config=quantization_config,
                     device_map="auto",
+                    torch_dtype=torch_dtype, # Explicitly pass torch_dtype even with quantization config
                 )
             else:
-                torch_dtype = torch.float16 if self.device.type == "cuda" else torch.float32
                 log.info(f"Using torch_dtype: {torch_dtype}")
                 self.model = MusicgenForConditionalGeneration.from_pretrained(
                     self.config.model_name,
@@ -109,15 +116,19 @@ class MusicGenEngine:
         top_p: float = 0.95,
     ) -> Tuple[torch.Tensor, int]:
         
-        # This call is now implicit via the service layer
-        # self.load_model(self.config.model_size, self.config.quantization)
-        
         device = self.model.device
+        
+        # Determine base generation dtype depending on context
+        target_dtype = torch.float16 if self.device.type == "cuda" else torch.float32
 
         if prompt_audio is not None:
-            audio_for_processor = prompt_audio.squeeze().to("cpu")
+            # Squeeze and send to cpu as numpy for the processor
+            # DO NOT clamp the tensor if it's already bounded or dynamically scaled by earlier logic
+            audio_for_processor = prompt_audio.squeeze().to("cpu").numpy()
+            
+            # Create the inputs using processor
             inputs = self.processor(
-                audio=audio_for_processor,
+                audio=audio_for_processor, 
                 sampling_rate=prompt_sr,
                 text=[prompt],
                 return_tensors="pt",
@@ -129,16 +140,36 @@ class MusicGenEngine:
                 return_tensors="pt",
                 padding=True
             ).to(device)
+            
+        # Ensure ALL floating point tensors in the input dict match the target dtype exactly!
+        # This is absolutely necessary for Audio generation (Encodec) with BitsAndBytes
+        for k, v in inputs.items():
+            if torch.is_tensor(v) and v.is_floating_point():
+                inputs[k] = v.to(target_dtype)
 
         max_new_tokens = int(duration * 50)
 
         with torch.no_grad():
-            audio_tensor = self.model.generate(
-                **inputs,
-                max_new_tokens=max_new_tokens,
-                do_sample=True,
-                top_k=top_k,
-                top_p=top_p,
-                temperature=temperature,
-            )
+            # The generate function of transformers models when using 8bit or 4bit sometimes has
+            # trouble with specific tensors staying float32 during conditional generation.
+            # Using autocast is safe but we also must disable caching if we are continuing 
+            # from an audio prompt with mixed types to prevent assert errors in attention blocks.
+            with torch.autocast(device_type=self.device.type, dtype=target_dtype):
+                
+                # In bitsandbytes quantized conditional generation, passing use_cache=True 
+                # (which is the default) along with prompt audio can trigger CUDA assert errors
+                # during attention pass where the past_key_values clash. We explicitly disable it
+                # if prompt_audio is present to safely unroll generation over time.
+                use_cache = False if prompt_audio is not None else True
+                
+                audio_tensor = self.model.generate(
+                    **inputs,
+                    max_new_tokens=max_new_tokens,
+                    do_sample=True,
+                    top_k=top_k,
+                    top_p=top_p,
+                    temperature=temperature,
+                    use_cache=use_cache
+                )
+
         return audio_tensor, self.config.sample_rate

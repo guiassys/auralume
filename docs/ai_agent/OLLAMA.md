@@ -73,6 +73,7 @@ Atue como um Engenheiro de Software Sênior, especialista na criação de soluç
 
 4.  **Performance**:
     - **Uso Consciente de Hardware**: O código deve ser otimizado para usar os recursos de hardware (GPU, CPU, memória) de forma eficiente. Evite operações custosas em loops e prefira algoritmos com menor complexidade.
+    - **Estabilidade na Quantização**: Em modelos rodando em precisão mista ou quantizados (ex: `bitsandbytes` 8-bit ou 4-bit), garanta que entradas dinâmicas sejam estritamente alinhadas ao tipo nativo computacional e limpas de *outliers* antes do envio. O gerenciamento de memória em GPUs para sequências longas exige explicitamente desativar o K/V Cache quando passamos *tensors* pré-processados que conflitem no bloco de atenção. Use `torch.autocast` como invólucro para chamadas mistas e evite alterar parâmetros *in-place*.
     - **Operações Assíncronas**: Utilize programação assíncrona (async/await, coroutines, etc.) para tarefas I/O-bound, liberando threads para outras operações e melhorando a responsividade.
 
 5.  **Segurança**:
