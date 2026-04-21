@@ -29,7 +29,7 @@ Refatorar completamente a interface Gradio para adotar uma estética de DAW, com
     - **Aba 3: "Console e Exportação"**: Manter o console de log e adicionar uma visualização de forma de onda (`gr.Waveform`) e as opções de exportação (WAV/MP3).
 
 3.  **Implementação de Componentes Globais**:
-    - **Header**: Criar uma seção no topo com o logo da Auralume e um indicador de status do sistema. Incluir uma barra de progresso persistente e fina que fica ativa durante a geração.
+    - **Header**: Criar uma seção no topo com o logo da Auratune e um indicador de status do sistema. Incluir uma barra de progresso persistente e fina que fica ativa durante a geração.
     - **Sidebar (Barra Lateral)**: Adicionar uma barra lateral à esquerda com ícones para navegação entre seções principais, como "Estúdio", "Sobre" e "Ajuda".
 
 4.  **Lógica de Interação (UX)**:

@@ -1,4 +1,4 @@
-"""Script para executar a interface Web do Auralume."""
+"""Script para executar a interface Web do Auratune."""
 
 import sys
 import os
@@ -10,7 +10,7 @@ sys.path.insert(0, project_root)
 from src.web.app import interface
 
 if __name__ == "__main__":
-    print("🚀 Iniciando Auralume...")
+    print("🚀 Iniciando Auratune...")
     print("📱 Acesse: http://localhost:7860")
     print("❌ Pressione Ctrl+C para parar")
 

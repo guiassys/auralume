@@ -87,6 +87,33 @@ class MusicGenerationService:
                 pipeline_type = config.get("pipeline_type", "Advanced")
                 _log(f"Starting {pipeline_type.lower()} pipeline for project: {config.get('name', 'Unnamed')}")
 
+                # --- Handle Reference Audio Upload ---
+                reference_audio_path = config.get("reference_audio")
+                if reference_audio_path and os.path.exists(reference_audio_path):
+                    _log(f"Loading reference audio: {os.path.basename(reference_audio_path)}")
+                    # Load audio file as a torch.Tensor and get its sample rate
+                    # Ensure it is a 1D or 2D tensor that MusicGen expects
+                    # We will use soundfile here instead of torchaudio to avoid issues
+                    waveform_np, sample_rate = sf.read(reference_audio_path)
+                    
+                    # sf.read returns (frames, channels) or just (frames,) for mono
+                    # Convert to torch tensor
+                    waveform = torch.from_numpy(waveform_np).to(torch.float32)
+                    
+                    # Convert to mono if it's stereo by averaging channels
+                    if waveform.ndim > 1 and waveform.shape[1] > 1:
+                        waveform = torch.mean(waveform, dim=1)
+                        
+                    # Make shape (channels, frames) instead of (frames, channels)
+                    # and add batch dimension so it becomes (1, channels, frames) = (1, 1, frames)
+                    waveform = waveform.unsqueeze(0).unsqueeze(0)
+                        
+                    config["prompt_audio"] = waveform
+                    config["prompt_sr"] = sample_rate
+                else:
+                    config["prompt_audio"] = None
+                    config["prompt_sr"] = None
+
                 # --- Model Loading with Dynamic Quantization ---
                 model_size = config.get("model_size")
                 quantization = config.get("quantization")

@@ -1,5 +1,5 @@
 """
-Professional Web Interface for Auralume using Gradio with a DAW-inspired,
+Professional Web Interface for Auratune using Gradio with a DAW-inspired,
 dark-themed layout and real-time log streaming.
 """
 import gradio as gr
@@ -14,7 +14,7 @@ from typing import Dict, Any, Tuple, Optional, List
 
 from src.services.music_service import MusicGenerationService
 from src.web.log_stream import LogStream
-from src.web.ui_theme import auralume_theme, custom_css
+from src.web.ui_theme import auratune_theme, custom_css
 
 # --- Logging Configuration ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -58,11 +58,11 @@ except RuntimeError as e:
 
 # --- UI DEFINITION ---
 def create_ui():
-    """Builds the Gradio Blocks UI for Auralume."""
-    with gr.Blocks(title="Auralume", theme=auralume_theme, css=custom_css) as demo:
+    """Builds the Gradio Blocks UI for Auratune."""
+    with gr.Blocks(title="Auratune", theme=auratune_theme, css=custom_css) as demo:
         # --- Header ---
         with gr.Row(elem_classes=["header"]):
-            gr.Markdown("## 🎹 Auralume", elem_id="logo")
+            gr.Markdown("## 🎹 Auratune", elem_id="logo")
 
         with gr.Row(elem_id="pipeline-container"):
             pipeline_type_input = gr.Radio(
@@ -80,7 +80,9 @@ def create_ui():
                     # --- Tab 1: Track Definitions ---
                     with gr.TabItem("🎵 Track Definitions", id=0):
                         with gr.Group():
-                            prompt_input = gr.Textbox(label="Style Prompt", placeholder="e.g., lofi, chill, synthwave, 80s", lines=3)
+                            with gr.Row():
+                                prompt_input = gr.Textbox(label="Style Prompt", placeholder="e.g., lofi, chill, synthwave, 80s", lines=3, scale=3)
+                                reference_audio_input = gr.Audio(label="Reference Audio (Optional)", type="filepath", sources=["upload"], scale=1)
                             model_size_input = gr.Dropdown(
                                 label="Model Size",
                                 choices=SETTINGS["generator_settings"]["model_sizes"],
@@ -200,7 +202,7 @@ def create_ui():
             return None
 
         def _build_generation_config(*args) -> Dict[str, Any]:
-            (pipeline_type, duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
+            (pipeline_type, duration, prompt, reference_audio, genre, mood, instruments, bpm_min, bpm_max, key,
              embedding_size, output_dir, output_sufix, audio_format, generate_midi,
              temperature, model_size, quantization, max_new_tokens, chunk_duration, continuation_primer,
              fade_in, fade_out, structure_json) = args
@@ -214,7 +216,8 @@ def create_ui():
 
             return {
                 "pipeline_type": pipeline_type,
-                "name": name, "duration": duration, "prompt": prompt, "genre": genre, "vibe": mood,
+                "name": name, "duration": duration, "prompt": prompt, "reference_audio": reference_audio, 
+                "genre": genre, "vibe": mood,
                 "instruments": instruments, "bpm_range": [bpm_min, bpm_max], "key": key,
                 "structure": structure,
                 "embedding_size": embedding_size, "output_dir": output_dir,
@@ -268,7 +271,7 @@ def create_ui():
 
         # --- Main Event Handler ---
         def run_generation(
-            pipeline_type, duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
+            pipeline_type, duration, prompt, reference_audio, genre, mood, instruments, bpm_min, bpm_max, key,
             embedding_size,
             output_dir, output_sufix, audio_format, generate_midi, temperature, model_size, quantization, max_new_tokens,
             chunk_duration, continuation_primer, fade_in, fade_out, structure_json
@@ -282,7 +285,7 @@ def create_ui():
             yield _ui_start_generation()
 
             config_args = (
-                pipeline_type, duration, prompt, genre, mood, instruments, bpm_min, bpm_max, key,
+                pipeline_type, duration, prompt, reference_audio, genre, mood, instruments, bpm_min, bpm_max, key,
                 embedding_size, output_dir, output_sufix, audio_format, generate_midi,
                 temperature, model_size, quantization, max_new_tokens, chunk_duration, continuation_primer,
                 fade_in, fade_out, structure_json
@@ -329,7 +332,7 @@ def create_ui():
         # --- Event Binding ---
         all_inputs = [
             pipeline_type_input,
-            duration_input, prompt_input, genre_input, mood_input, instruments_input, bpm_min_input, bpm_max_input, key_input,
+            duration_input, prompt_input, reference_audio_input, genre_input, mood_input, instruments_input, bpm_min_input, bpm_max_input, key_input,
             embedding_size_input,
             output_dir_input, output_sufix_input, audio_format_input, generate_midi_input, temperature_input, model_size_input, quantization_input, max_new_tokens_input,
             chunk_duration_input, continuation_primer_input, fade_in_input, fade_out_input, structure_input
@@ -344,6 +347,7 @@ def create_ui():
         def clear_form():
             return {
                 prompt_input: "",
+                reference_audio_input: None,
                 duration_input: SETTINGS["ui_settings"]["duration"]["default"],
                 genre_input: SETTINGS["ui_settings"]["genres"][0] if SETTINGS["ui_settings"]["genres"] else None,
                 mood_input: SETTINGS["ui_settings"]["moods"][0] if SETTINGS["ui_settings"]["moods"] else None,
@@ -373,7 +377,7 @@ def create_ui():
             }
 
         clear_outputs = [
-            prompt_input, duration_input, genre_input, mood_input, instruments_input,
+            prompt_input, reference_audio_input, duration_input, genre_input, mood_input, instruments_input,
             bpm_min_input, bpm_max_input, key_input, structure_input, embedding_size_input,
             output_dir_input, output_sufix_input, audio_format_input, generate_midi_input,
             temperature_input, model_size_input, quantization_input, max_new_tokens_input,

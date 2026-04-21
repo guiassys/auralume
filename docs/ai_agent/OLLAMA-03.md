@@ -17,7 +17,7 @@ Refatorar a interface Gradio para incorporar um layout com tema de estúdio musi
 ## 🚀 Plano de Implementação
 
 1.  **Melhoria do Layout e Estilo**:
-    - Atualizar o título principal para **"Auralume AI Music Generator"**.
+    - Atualizar o título principal para **"Auratune AI Music Generator"**.
     - Aplicar um tema escuro (`theme='dark'`) ao `gr.Blocks` para uma aparência de estúdio.
     - Organizar os componentes de entrada e saída em `gr.Row` e `gr.Column` para uma melhor estrutura visual.
 

@@ -1,6 +1,6 @@
-# 🎧 Auralume
+# 🎧 Auratune
 
-Auralume é um sistema de criação de conteúdo digital no estilo lo-fi, inspirado por experiências imersivas como as da Lofi Girl.
+Auratune é um sistema de criação de conteúdo digital no estilo lo-fi, inspirado por experiências imersivas como as da Lofi Girl.
 
 A plataforma permite a geração automatizada de músicas lo-fi combinadas com identidade visual, narrativa e personagens próprios.
 
@@ -8,7 +8,7 @@ A plataforma permite a geração automatizada de músicas lo-fi combinadas com i
 
 # 🌙 Aelion
 
-Aelion é o primeiro personagem criado dentro do universo Auralume.
+Aelion é o primeiro personagem criado dentro do universo Auratune.
 
 Ele é um anjo solitário e contemplativo, frequentemente representado em cenários silenciosos e elevados, observando o mundo enquanto suas emoções são traduzidas em música.
 
@@ -30,7 +30,7 @@ Criar uma pipeline automatizada capaz de:
 
 # 🏗️ Arquitetura do Sistema
 
-O Auralume foi projetado como um pipeline modular de geração de conteúdo multimídia baseado em IA.
+O Auratune foi projetado como um pipeline modular de geração de conteúdo multimídia baseado em IA.
 
 ## 🔹 Camadas do sistema
 
@@ -64,7 +64,7 @@ Este ambiente é responsável pela geração de áudio e pela interface web.
 
 ```bash
 # Navegue até o diretório do projeto
-cd /path/to/auralume
+cd /path/to/auratune
 
 # Crie e ative o ambiente virtual principal
 python3 -m venv .venv
@@ -116,7 +116,7 @@ Acesse: **http://localhost:7860**
 # 📁 Estrutura do Projeto
 
 ```
-auralume/
+auratune/
 ├── .venv/                 # Ambiente virtual principal (Python 3.12)
 ├── .venv-midi/            # Ambiente virtual para MIDI (Python 3.11)
 ├── src/
@@ -160,7 +160,7 @@ auralume/
 
 # 🌌 Visão
 
-Auralume é projetado como um sistema escalável de criação de universos criativos, onde música, narrativa e identidade visual coexistem.
+Auratune é projetado como um sistema escalável de criação de universos criativos, onde música, narrativa e identidade visual coexistem.
 
 ---
 

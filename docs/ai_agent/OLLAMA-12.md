@@ -4,7 +4,7 @@
 
 ## 🌍 Contexto
 
-- **Aplicação Alvo**: A aplicação Auralume como um todo.
+- **Aplicação Alvo**: A aplicação Auratune como um todo.
 - **Problema Crítico**: A aplicação sofre de **perda de contexto** em músicas longas (acima de 30 segundos). A estratégia de "chunking" (dividir em pedaços) é ingênua, gerando cada segmento de forma independente, o que resulta em uma faixa sem identidade musical, com quebras abruptas de estilo e melodia.
 - **Causa Raiz**: Existência de dois pipelines de geração: um simples e problemático (`TrackGenerator`) e um avançado, porém inativo (`MusicPipeline`). A perda de contexto ocorre porque o pipeline simples é o que está em uso.
 

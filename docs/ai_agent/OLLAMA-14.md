@@ -4,13 +4,13 @@
 
 ## 🌍 Contexto
 
-- **Aplicação Alvo**: Plataforma de geração de música Auralume.
+- **Aplicação Alvo**: Plataforma de geração de música Auratune.
 - **Problema de Negócio**: A interface atual da plataforma carece de uma identidade visual profissional e apresenta uma usabilidade confusa. Elementos cruciais estão mal posicionados, o feedback de progresso é intrusivo e a aparência genérica não inspira confiança ou criatividade, o que pode afastar usuários que esperam uma experiência similar à de um software de produção musical (DAW).
-- **Necessidade Estratégica**: Para posicionar a Auralume como uma ferramenta séria e intuitiva no mercado, é essencial refinar a experiência do usuário (UX) e implementar uma identidade visual (UI) coesa e profissional, que remeta ao universo da produção musical.
+- **Necessidade Estratégica**: Para posicionar a Auratune como uma ferramenta séria e intuitiva no mercado, é essencial refinar a experiência do usuário (UX) e implementar uma identidade visual (UI) coesa e profissional, que remeta ao universo da produção musical.
 
 ## 🎯 Objetivo Principal
 
-Transformar a interface da Auralume em uma experiência de usuário mais profissional, intuitiva e esteticamente alinhada a um software de áudio, com foco em três pilares:
+Transformar a interface da Auratune em uma experiência de usuário mais profissional, intuitiva e esteticamente alinhada a um software de áudio, com foco em três pilares:
 
 1.  **Implementar uma Identidade Visual Profissional**:
     - **Diretriz**: A interface deve abandonar o tema padrão e adotar uma paleta de cores escura (dark theme), inspirada em DAWs populares. O design deve ser limpo, com bom contraste e uma aparência que transmita profissionalismo e foco na criatividade.

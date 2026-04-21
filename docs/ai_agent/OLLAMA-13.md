@@ -4,13 +4,13 @@
 
 ## 🌍 Contexto
 
-- **Aplicação Alvo**: Plataforma de geração de música Auralume.
+- **Aplicação Alvo**: Plataforma de geração de música Auratune.
 - **Problema de Negócio**: A plataforma atual oferece um único modo de geração "Avançado", que, embora poderoso, é complexo para usuários iniciantes. Além disso, não há flexibilidade para o usuário escolher a performance do modelo de IA, impactando a experiência de uso.
 - **Necessidade Estratégica**: Para ampliar a base de usuários e melhorar a experiência, precisamos introduzir um modo de geração "Simples" e permitir que os usuários selecionem o modelo de IA que melhor se adapta às suas necessidades de velocidade e qualidade.
 
 ## 🎯 Objetivo Principal
 
-Evoluir a plataforma Auralume para se tornar um sistema modular de geração musical, implementando duas novas features de alto valor para o usuário:
+Evoluir a plataforma Auratune para se tornar um sistema modular de geração musical, implementando duas novas features de alto valor para o usuário:
 
 1.  **Modo de Geração "Simples"**: Oferecer uma experiência de "um clique" onde o usuário insere apenas uma ideia (prompt) e recebe uma música curta e de alta qualidade, ideal para loops e experimentação rápida.
 2.  **Seleção de Performance do Modelo**: Permitir que o usuário escolha o "tamanho" do modelo de IA (ex: "Pequeno", "Médio", "Grande"), balanceando entre velocidade de geração e complexidade musical.
